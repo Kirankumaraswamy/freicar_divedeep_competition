@@ -1,0 +1,22 @@
+{
+    "agent_name": "deploy_teamname",
+    "url": "https://aisgit.informatik.uni-freiburg.de/vertensj/freicar_demo_submission.git",
+    "capabilities": ["simulated", "real"],
+    "parameters": [
+        {
+            "parameter": "sync_topic",
+            "type": "string",
+            "default": "!"
+        },
+        {
+            "parameter": "spawn_sensors",
+            "type": "bool",
+            "default": true
+        },
+        {
+            "parameter": "other_param",
+            "type": "float",
+            "default": 0.5
+        }
+    ]
+}
