@@ -24,6 +24,7 @@
   <remap from="odometry" to="$(arg name)/odometry"/>
 
   <node pkg="freicar_control" type="pure_pursuit" name="$(arg name)_freicar_controller" output="screen">
+    <param name="agent_name" value="$(arg name)"/>
     <param name="robot_frame_id" value="$(arg tf_name)"/>
     <param name="tracker_frame_id" value="$(arg tf_name)"/>
     <param name="wheelbase" value="$(arg wheelbase)"/>

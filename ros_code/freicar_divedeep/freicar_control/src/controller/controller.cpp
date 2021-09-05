@@ -136,6 +136,15 @@ void controller::receivePath(raiscar_msgs::ControllerPath new_path)
 /*
  * Virtual function that needs to be reimplemented
  */
+void controller::controller_step1(geometry_msgs::PoseArray msg)
+{
+    std::cout << "No action implemented ..." << std::endl;
+    ROS_INFO("inside controller main empty function");
+}
+
+/*
+ * Virtual function that needs to be reimplemented
+ */
 void controller::controller_step(nav_msgs::Odometry odom)
 {
     std::cout << "No action implemented ..." << std::endl;
@@ -155,6 +164,7 @@ controller::controller():pos_tol_(0.1), idx_(0),
     nh_private_.param<float>("vmax", vmax_, 5.0);
     nh_private_.param<std::string>("robot_frame_id", tracker_frame_id, "freicar_1");
     nh_private_.param<std::string>("target_frame_id", target_frame_id_, tracker_frame_id + "/lookahead");
+    nh_private_.param<std::string>("agent_name", agent_name, "freicar_1");
 
     front_axis_frame_id_ = tracker_frame_id + "/front_axis";
     rear_axis_frame_id_ = tracker_frame_id + "/rear_axis";
@@ -165,12 +175,12 @@ controller::controller():pos_tol_(0.1), idx_(0),
     target_p_.transform.rotation.w = 1.0;
 
     // Subscribers to path segment and odometry
-    sub_path_ = nh_.subscribe("freicar_1/path_segment", 1, &controller::receivePath, this);
-    sub_odom_ = nh_.subscribe("freicar_1/odometry", 1, &controller::controller_step, this);
+    sub_path_ = nh_.subscribe(agent_name + "/path_segment", 1, &controller::receivePath, this);
+    sub_odom_ = nh_.subscribe(agent_name + "/odometry", 1, &controller::controller_step, this);
 
     // Publishers for the control command and the "reached" message
-    pub_acker_ = nh_.advertise<raiscar_msgs::ControlCommand>("freicar_1/control", 1);
-    pub_goal_reached_ = nh_.advertise<std_msgs::Bool>("freicar_1/goal_reached", 1);
+    pub_acker_ = nh_.advertise<raiscar_msgs::ControlCommand>(agent_name + "/control", 1);
+    pub_goal_reached_ = nh_.advertise<std_msgs::Bool>(agent_name + "/goal_reached", 1);
     completion_advertised_ = false;
     current_steering_angle_ = 0;
 

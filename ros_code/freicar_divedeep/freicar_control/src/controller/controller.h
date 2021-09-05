@@ -27,6 +27,7 @@
 #include "raiscar_msgs/ControlCommand.h"
 #include "std_msgs/Bool.h"
 #include "raiscar_msgs/ControllerPath.h"
+#include "geometry_msgs/PoseArray.h"
 
 class PID{
 public:
@@ -55,6 +56,7 @@ private:
 class controller {
 public:
     controller();
+    virtual void controller_step1(geometry_msgs::PoseArray msg);
     virtual void controller_step(nav_msgs::Odometry odom);
     void receivePath(raiscar_msgs::ControllerPath new_path);
     void sendGoalMsg(const bool reached);
@@ -84,7 +86,7 @@ public:
     tf2_ros::TransformBroadcaster tf_broadcaster_;
 
     geometry_msgs::TransformStamped target_p_;
-    std::string map_frame_id_, front_axis_frame_id_, rear_axis_frame_id_, target_frame_id_, tracker_frame_id;
+    std::string map_frame_id_, front_axis_frame_id_, rear_axis_frame_id_, target_frame_id_, tracker_frame_id, agent_name;
     float current_steering_angle_;
 
     PID vel_pid;

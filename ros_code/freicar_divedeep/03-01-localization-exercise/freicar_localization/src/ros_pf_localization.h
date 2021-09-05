@@ -106,6 +106,12 @@ private:
     size_t num_measurements_;
     bool first_observation_received_;
 
+    std::string agent_name, map_name, map_path;
+    float init_x, init_y, heading;
+    bool use_yaml_spawn;
+
+    tf2_ros::TransformBroadcaster tf_broadcaster;
+
 
 };
 

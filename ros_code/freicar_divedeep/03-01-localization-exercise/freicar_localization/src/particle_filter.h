@@ -57,7 +57,7 @@ public:
         map_ = other.map_;
       }
 
-    particle_filter(freicar::map::Map* map, std::shared_ptr<ros_vis> vis, bool use_lane_reg);
+    particle_filter(freicar::map::Map* map, std::shared_ptr<ros_vis> vis, bool use_lane_reg, std::string agent_name_param);
 
     float getSumWeights();
 
@@ -111,6 +111,8 @@ private:
     bool memory_init_;
     int memory_insert_cnt_;
     bool use_lane_reg_;
+
+    std::string agent_name;
 
     int binarySearch(float *arr, int l, int r, int x);
 };

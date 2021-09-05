@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>freicar_control</name>
+  <name>planner</name>
   <version>0.0.0</version>
-  <description>The pure_pursuit package</description>
+  <description>The planner package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-  <maintainer email="jannik@todo.todo">jannik</maintainer>
+  <maintainer email="vertensj@todo.todo">vertensj</maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
@@ -19,7 +19,7 @@
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/pure_pursuit</url> -->
+  <!-- <url type="website">http://wiki.ros.org/ros_airsim_network</url> -->
 
 
   <!-- Author tags are optional, multiple are allowed, one per tag -->
@@ -50,30 +50,62 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
+  <build_depend>tf</build_depend>
   <build_depend>rospy</build_depend>
+  <build_depend>sensor_msgs</build_depend>
   <build_depend>std_msgs</build_depend>
+  <build_depend>nav_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
+  <build_depend>visualization_msgs</build_depend>
+  <build_depend>image_transport</build_depend>
+  <build_depend>cv_bridge</build_depend>
+  <build_depend>freicar_sign_detect</build_depend>
+  <build_depend>freicar_common</build_depend>
+  <build_depend>freicar_map</build_depend>
+  <build_depend>tf_conversions</build_depend>
+  <build_depend>perception_pkg</build_depend>
+  <build_depend>tf2</build_depend>
+  <build_depend>tf2_ros</build_depend>
+  <build_depend>raiscar_msgs</build_depend>
+
+
   <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>rospy</build_export_depend>
+  <build_export_depend>sensor_msgs</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
+  <build_export_depend>tf</build_export_depend>
+  <build_export_depend>nav_msgs</build_export_depend>
   <build_export_depend>geometry_msgs</build_export_depend>
+  <build_export_depend>visualization_msgs</build_export_depend>
+  <build_export_depend>image_transport</build_export_depend>
+  <build_export_depend>cv_bridge</build_export_depend>
+  <build_export_depend>freicar_sign_detect</build_export_depend>
+  <build_export_depend>freicar_common</build_export_depend>
+  <build_export_depend>freicar_map</build_export_depend>
+  <build_export_depend>tf_conversions</build_export_depend>
+  <build_export_depend>perception_pkg</build_export_depend>
+  <build_export_depend>tf2</build_export_depend>
+  <build_export_depend>tf2_ros</build_export_depend>
+  <build_export_depend>raiscar_msgs</build_export_depend>
+
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
-  <exec_depend>raiscar_msgs</exec_depend>
-
-  <exec_depend>geometry_msgs</exec_depend>
-  <build_depend>geometry_msgs</build_depend>
+  <exec_depend>tf</exec_depend>
   <exec_depend>nav_msgs</exec_depend>
-  <build_depend>nav_msgs</build_depend>
-  <exec_depend>tf2</exec_depend>
-  <build_depend>tf2</build_depend>
-  <exec_depend>tf2_ros</exec_depend>
-  <build_depend>tf2_ros</build_depend>
-  <exec_depend>dynamic_reconfigure</exec_depend>
-  <build_depend>dynamic_reconfigure</build_depend>
-  <build_depend>raiscar_msgs</build_depend>
   <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>image_transport</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>freicar_sign_detect</exec_depend>
+  <exec_depend>freicar_common</exec_depend>
+  <exec_depend>freicar_map</exec_depend>
+  <exec_depend>tf_conversions</exec_depend>
+  <exec_depend>perception_pkg</exec_depend>
+  <exec_depend>tf2</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>raiscar_msgs</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

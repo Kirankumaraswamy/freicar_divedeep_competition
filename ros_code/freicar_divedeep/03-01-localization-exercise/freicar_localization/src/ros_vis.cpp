@@ -9,11 +9,12 @@
 /*
  * This class comprises of many visualization functions that can send points or lines as ros msgs to rviz
  */
-ros_vis::ros_vis(std::shared_ptr<ros::NodeHandle> n):n_(n)
+ros_vis::ros_vis(std::shared_ptr<ros::NodeHandle> n, std::string agent_name_param):n_(n)
 {
+    agent_name = agent_name_param;
     marker_pub_ = n_->advertise<visualization_msgs::Marker>("particlep_filter_info_marker", 10);
     poses_pub_ = n_->advertise<geometry_msgs::PoseArray>("particles", 10);
-    best_particle_pub_ = n_->advertise<geometry_msgs::PoseArray>("best_particle", 10);
+    best_particle_pub_ = n_->advertise<geometry_msgs::PoseArray>(agent_name+"/best_particle", 10);
 }
 
 void ros_vis::SendPoints(PointCloud<float> pts, const std::string ns, const std::string frame, float r, float g, float b){

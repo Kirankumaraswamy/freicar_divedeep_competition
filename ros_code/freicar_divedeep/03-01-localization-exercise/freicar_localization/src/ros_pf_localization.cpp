@@ -24,13 +24,23 @@ freicar::map::Map &Localizer::map_ = freicar::map::Map::GetInstance();
  * 3. Initializes all particles of the particle filter class
  */
 Localizer::Localizer(std::shared_ptr<ros::NodeHandle> n) : n_(n), it_(*n) {
+
+    n_->param<std::string>("agent_name", agent_name, "freicar_1");
+    n_->param<bool>("use_yaml_spawn", use_yaml_spawn, false);
+    n_->param<float>("init_x", init_x, 1.0);
+    n_->param<float>("init_y", init_y, 0);
+    n_->param<float>("heading", heading, 0);
+    n_->param<std::string>("map_name", map_name, "freicar_1");
+    n_->param<std::string>("map_path", map_path, "map_path_not_given");
+
+
     ros::Duration sleep_time(1);
-    odo_sub_ = n_->subscribe("/freicar_1/odometry", 1, &Localizer::OdoCallback, this);
+    odo_sub_ = n_->subscribe(agent_name+"/odometry", 1, &Localizer::OdoCallback, this);
     marker_sub_ = n_->subscribe("/traffic_signs", 1, &Localizer::markerCallback, this);
     last_odo_update_ = ros::Time::now();
 
     freicar::map::ThriftMapProxy map_proxy("127.0.0.1", 9091, 9090);
-    std::string map_path = "/home/freicar/freicar_ws/src/freicar_base/freicar_map/maps/freicar_1.aismap";
+    //std::string map_path = "/home/freicar/freicar_ws/src/freicar_base/freicar_map/maps/freicar_1.aismap";
     if (!ros::param::get("/map_path", map_path)) {
         ROS_ERROR("could not find parameter: map_path! map initialization failed.");
         return;
@@ -47,7 +57,7 @@ Localizer::Localizer(std::shared_ptr<ros::NodeHandle> n) : n_(n), it_(*n) {
     }
 
     if (use_lane_reg_) {
-        image_sub_ = it_.subscribe("/freicar_1/sim/camera/rgb/front/reg_bev", 1, &Localizer::RegCallback, this);
+        image_sub_ = it_.subscribe(agent_name+"/sim/camera/rgb/front/reg_bev", 1, &Localizer::RegCallback, this);
     }
 // if the map can't be loaded
     if (!map_proxy.LoadMapFromFile(map_path)) {
@@ -67,8 +77,8 @@ Localizer::Localizer(std::shared_ptr<ros::NodeHandle> n) : n_(n), it_(*n) {
     ros::Duration(2.0).sleep();
     freicar::map::Map::GetInstance().PostProcess(0.22);  // densifies the lane points
 
-    visualizer_ = std::make_shared<ros_vis>(n_);
-    p_filter = std::make_shared<particle_filter>(&map_, visualizer_, use_lane_reg_);
+    visualizer_ = std::make_shared<ros_vis>(n_, agent_name);
+    p_filter = std::make_shared<particle_filter>(&map_, visualizer_, use_lane_reg_, agent_name);
     sleep_time.sleep();
 //    visualizer_->SendPoints(p_filter->getMapKDPoints(), "map_points", "/map");
     ROS_INFO("Sent map points...");
@@ -83,7 +93,7 @@ Eigen::Transform<float, 3, Eigen::Affine> Localizer::GetTf(ros::Time time) {
     Eigen::Transform<float, 3, Eigen::Affine> gt_t = Eigen::Transform<float, 3, Eigen::Affine>::Identity();
     tf::StampedTransform transform;
     try {
-        listener.lookupTransform("/map", "/freicar_1/base_link",
+        listener.lookupTransform("/map", agent_name+"/base_link",
                                  time, transform);
     }
     catch (tf::TransformException ex) {
@@ -138,9 +148,25 @@ void Localizer::OdoCallback(const nav_msgs::OdometryConstPtr &msg) {
     p_filter->MotionStep(*msg);
 
     //visualizer_->SendBestParticle(p_filter->getBestParticle(), "/map");
-    Particle best_particle = p_filter->getMeanParticle(1);
+    Particle best_particle = p_filter->getMeanParticle(1000);
     visualizer_->SendBestParticle(best_particle, "map");
     last_odo_update_ = msg->header.stamp;
+
+    geometry_msgs::TransformStamped stf;
+    stf.header.stamp = last_odo_update_;
+    stf.header.frame_id = "map";
+    stf.child_frame_id = agent_name+"/handle";
+    stf.transform.translation.x = best_particle.transform.translation().x();
+    stf.transform.translation.y = best_particle.transform.translation().y();
+    stf.transform.translation.z = best_particle.transform.translation().z();
+    std::cout << "best particle: " << best_particle.transform.translation().x() << best_particle.transform.translation().x() << std::endl;
+
+    Eigen::Quaternionf quat(best_particle.transform.rotation());
+    stf.transform.rotation.x = quat.x();
+    stf.transform.rotation.y = quat.y();
+    stf.transform.rotation.z = quat.z();
+    stf.transform.rotation.w = quat.w();
+    tf_broadcaster.sendTransform(stf);
 
     if (evaluate_ && first_observation_received_) {
         Eigen::Transform<float, 3, Eigen::Affine> gt_pose = this->GetTf(ros::Time(0));

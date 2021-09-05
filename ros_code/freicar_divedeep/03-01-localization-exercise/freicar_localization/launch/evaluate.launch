@@ -16,10 +16,12 @@
 
 	<node name="freicar_localization" pkg="freicar_localization" type="freicar_localization_node" respawn="false" output="screen">
 		<param name="evaluate"  type="bool" value="$(arg evaluate)" />
+		<param name="agent_name"  type="string" value="$(arg agent_name)" />
 		<param name="use_lane_regression"       type="bool" value="$(arg use_lane_regression)" />
 	</node>
 
 <node pkg="rosbag" type="play" name="player" launch-prefix="bash -c 'sleep 20.0; $0 $@' " args="--clock $(find freicar_localization)/loc_bags/freicar_loc_2.bag">
+  <param name="agent_name"  type="string" value="$(arg agent_name)" />
   </node>
 
 </launch>

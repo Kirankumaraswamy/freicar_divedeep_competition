@@ -11,7 +11,7 @@
 
 const unsigned int sizeOfParticles = 5000;
 
-particle_filter::particle_filter(freicar::map::Map* map, std::shared_ptr<ros_vis> vis, bool use_lane_reg): visualizer_(vis)
+particle_filter::particle_filter(freicar::map::Map* map, std::shared_ptr<ros_vis> vis, bool use_lane_reg, std::string agent_name_param): visualizer_(vis)
 {
     map_ = map;
     particles_init_ = false;
@@ -22,6 +22,8 @@ particle_filter::particle_filter(freicar::map::Map* map, std::shared_ptr<ros_vis
     particle_memory_.resize(BEST_PARTICLE_HISTORY);
     memory_init_ = false;
     memory_insert_cnt_ = 0;
+
+    agent_name = agent_name_param;
 
     // Spread particles over whole map
     if(!particles_init_){
@@ -99,33 +101,29 @@ int particle_filter::binarySearch(float *arr, int l, int r, int x)
  * If you need uniform distributions take a look on: std::uniform_real_distribution
  */
 void particle_filter::LowVarianceSampling(){
+    float normalizer = 0.0;
+    for (int i = 0; i < particles_.size(); i++){
+        normalizer = normalizer + particles_[i].weight;
+    }
+
     std::vector<Particle> new_particles;
     std::vector<int> new_idx;
     int M = particles_.size();
-//    std::default_random_engine generator(time(0));
-    std::uniform_real_distribution<double> distribution(0, 1/M);
-    float rand_val =  static_cast <float> (rand()) /( static_cast <float> (RAND_MAX));
-    rand_val /= M;
-    float c = particles_[0].weight;
+    std::uniform_real_distribution<float> u_dist(0, 1.0/float(M));
+    float U =u_dist(generator_);
+    float c = particles_[0].weight / normalizer;
     int i = 0;
-    float U = 0.0;
     for(int m=1 ; m<M ; m++){
-        U = rand_val + (m - 1) * (1/M);
+
         while(U > c){
             i++;
-            c += particles_[i].weight;
+            c += particles_[i].weight /normalizer ;
         }
+        U = U + 1.0/float(M);
         Particle p = particles_[i];
         new_particles.push_back(p);
-        new_idx.push_back(i);
-        std::cout<<"size of new:"<<new_particles.size()<<"\tr"<< rand_val << "\tU:" << U << "\tc:" << c << "\ti:" << i << std::endl;
     }
     particles_ = new_particles;
-    std::vector<int>::iterator it;
-    it = unique(new_idx.begin(), new_idx.end());
-
-    new_idx.resize(distance(new_idx.begin(),it));
-    std::cout<<"size: "<<new_idx.size()<<std::endl;
 }
 
 
@@ -150,30 +148,38 @@ void particle_filter::InitParticles(){
 
     //Keep above code, and implement under this block! /////////////////////////////////////////////////////////////////
 
-    // DUMMY EXAMPLE FOR ONE PARTICLE::::
-    Particle dummy;  // Just an example
-    dummy.weight = 0.0;  // Just an example
-    //dummy.transform = Eigen::Transform<float,3,Eigen::Affine>::Identity(); // Just an example
-    Eigen::Transform<float, 3, Eigen::Affine> init = Eigen::Transform<float, 3, Eigen::Affine>::Identity();
-    particles_.push_back(dummy);  // Just an example
-    // DUMMY EXAMPLE FOR ONE PARTICLE::::cx
-    Particle particle = Particle();
+    //std::uniform_real_distribution<float> generate_x(maxes_mins[0], maxes_mins[1]);
+    //std::uniform_real_distribution<float> generate_y(maxes_mins[2], maxes_mins[3]);
+    //std::uniform_real_distribution<float> generate_rot(-M_PI, M_PI);_
+    float init_x, init_y;
+
+    ros::param::get("/freicar_"+agent_name+"_carla_proxy/spawn/x", init_x);
+    ros::param::get("/freicar_"+agent_name+"_carla_proxy/spawn/y", init_y);
+
+    std::uniform_real_distribution<float> generate_x(init_x - 0.2, init_x + 0.2);
+    std::uniform_real_distribution<float> generate_y(init_y - 0.2, init_y + 0.2);
+    std::uniform_real_distribution<float> generate_rot(-M_PI, M_PI);
+
     for(int i=0;i<sizeOfParticles-1;i++){
-        //Randomly select importance weight between 0.0 to 1.0 inclusive
-        particle.weight = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        Particle particle;
+        //Uniform weight to all particles in the beginning
+        particle.weight = 1.0f;
         //Randomly select the x and y co-ordinate from the map
-        float x = maxes_mins[0] + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(maxes_mins[1]-maxes_mins[0])));
-        float y = maxes_mins[2] + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(maxes_mins[3]-maxes_mins[2])));
-        //Select a random angle from 0 to 360
-        float angle = static_cast <float> (rand()) / (static_cast <float> (RAND_MAX/360.0));
-        Eigen::Transform<float, 3, Eigen::Affine> init = Eigen::Transform<float, 3, Eigen::Affine> ().Identity();
-        init.translate(Eigen::Vector3f(x, y, 0.0));
-        Eigen::Quaternionf angle_init;
-        angle_init = Eigen::AngleAxisf(0.0, Eigen::Vector3f::UnitX())
+        float x = generate_x(generator_);
+        float y = generate_y(generator_);
+        //Select a random angle from -3.14 t0 +3.14
+        float angle = generate_rot(generator_);
+
+        Eigen::Transform<float, 3, Eigen::Affine> t = Eigen::Transform<float, 3, Eigen::Affine> ().Identity();
+        t.translate(Eigen::Vector3f(x, y, 0.0));
+
+        Eigen::Quaternionf rot;
+        rot = Eigen::AngleAxisf(0.0, Eigen::Vector3f::UnitX())
                                * Eigen::AngleAxisf(0.0, Eigen::Vector3f::UnitY())
                                * Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ());
-        init.rotate(angle_init);
-        particle.transform = init;
+        t.rotate(rot);
+
+        particle.transform = t;
         particles_.push_back(particle);
     }
     visualizer_->SendPoses(particles_, "particles", "map");
@@ -320,44 +326,23 @@ void particle_filter::ConstantVelMotionModel(nav_msgs::Odometry odometry, float 
     for (size_t i = 0; i < particles_.size(); i++) {
         Eigen::Transform<float, 3, Eigen::Affine> particle_transform = particles_.at(i).transform;
         //Adding noise to get the new linear and angular velocity
-        float x_trans = (odometry.twist.twist.linear.x - dist_x(generator_)) * time_step;
-        float y_trans = (odometry.twist.twist.linear.y - dist_y(generator_)) * time_step;
-        float z_rot = (odometry.twist.twist.angular.z - dist_yaw(generator_)) * time_step;
+        float x_vel = (odometry.twist.twist.linear.x - dist_x(generator_)) * time_step;
+        float y_vel = (odometry.twist.twist.linear.y - dist_y(generator_)) * time_step;
+        float z_vel = (odometry.twist.twist.angular.z - dist_yaw(generator_)) * time_step;
         // Creating an affine matrix and initializing it using the particles co-ordinates
         Eigen::Transform<float, 3, Eigen::Affine> t = Eigen::Transform<float, 3, Eigen::Affine>::Identity();
-        t.translate(Eigen::Vector3f(particle_transform.translation().x(),particle_transform.translation().y(),
-                                    particle_transform.translation().z()));
+        t.translate(Eigen::Vector3f(x_vel, y_vel, 0.0f));
         Eigen::Quaternion<float> angular_vel;
         angular_vel = Eigen::AngleAxisf(0, Eigen::Vector3f::UnitX())
                 * Eigen::AngleAxisf(0, Eigen::Vector3f::UnitY())
-                * Eigen::AngleAxisf(z_rot*M_PI, Eigen::Vector3f::UnitZ());
-        static tf::TransformListener listener;
-        static tf::StampedTransform transform;
-        try {
-            listener.lookupTransform("map", "/freicar_1/base_link",
-                                     ros::Time(0), transform);
-            tf::Vector3 linear_velocity = tf::Vector3(x_trans, y_trans, 0.0);
-            tf::Vector3 origin = tf::Vector3(0,0,0);
-            tf::Vector3 linear_velocity_map = (transform * linear_velocity) - (transform * origin);
-            //Translate the affine matrix w.r.t new velocity
-            t.translate(Eigen::Vector3f(linear_velocity_map.x(), linear_velocity_map.y(), linear_velocity_map.z()));
-            t.rotate(Eigen::Quaternion<float>(transform.getRotation().getW(), transform.getRotation().getX(),
-                                              transform.getRotation().getY(),transform.getRotation().getZ()));
-        }
-        catch (tf::TransformException ex) {
-            ROS_ERROR("%s", ex.what());
-        }
-        particles_[i].transform = t;
-    }
-}
+                * Eigen::AngleAxisf(z_vel, Eigen::Vector3f::UnitZ());
+        t.rotate(angular_vel);
 
-Eigen::Matrix4f particle_filter::create_affine_matrix(float a, float b, float c, Eigen::Vector3f trans) {
-    Eigen::Transform<float, 3, Eigen::Affine> t;
-    t = Eigen::Translation<float, 3>(trans);
-    t.rotate(Eigen::AngleAxis<float>(a, Eigen::Vector3f::UnitX()));
-    t.rotate(Eigen::AngleAxis<float>(b, Eigen::Vector3f::UnitY()));
-    t.rotate(Eigen::AngleAxis<float>(c, Eigen::Vector3f::UnitZ()));
-    return t.matrix();
+        particle_transform = particle_transform * t;
+        particles_[i].transform = particle_transform;
+
+
+    }
 }
 
 // This function initializes the KD-Trees for fast lookup of nearest neighbor data associations
@@ -424,7 +409,7 @@ std::vector<Sign> particle_filter::transformSignsToCarBaseLink(const std::vector
 
     if(!initialized){
         try{
-            listener.lookupTransform("freicar_1/base_link", "/freicar_1/zed_camera",
+            listener.lookupTransform(agent_name+"/base_link", agent_name+"/zed_camera",
                                      ros::Time(0), c_t_b);
             initialized = true;
         }
@@ -471,7 +456,7 @@ bool particle_filter::ObservationStep(const std::vector<cv::Mat> reg, const std:
     const std::vector<Sign> car_signs = transformSignsToCarBaseLink(observed_signs); // inline
 
     // We only want to resample if everything is initialized and if we drive at least 0.1 m/s.
-    if(odo_init_ && particles_init_ && abs(latest_x_vel) >= 0.0){
+    if(odo_init_ && particles_init_ && abs(latest_x_vel) > 0.1){
 //    if(odo_init_ && particles_init_ ){
         high_resolution_clock::time_point t1 = high_resolution_clock::now();
         float best_val =  0.0;
@@ -506,8 +491,8 @@ bool particle_filter::ObservationStep(const std::vector<cv::Mat> reg, const std:
                 }
             }
             // Resample new particles
-            //LowVarianceSampling();
-            RouletteSampling();
+            LowVarianceSampling();
+            //RouletteSampling();
         }
     }
 
@@ -530,7 +515,7 @@ void particle_filter::MotionStep(nav_msgs::Odometry odometry){
     latest_x_vel = odometry.twist.twist.linear.x;
     {
         std::lock_guard<std::mutex> guard(particle_mutex_);
-        //ConstantVelMotionModel(odometry, abs((odometry.header.stamp - prev_odo_.header.stamp).toSec()));
+        ConstantVelMotionModel(odometry, abs((odometry.header.stamp - prev_odo_.header.stamp).toSec()));
         visualizer_->SendPoses(particles_, "particles", "map");
     }
 

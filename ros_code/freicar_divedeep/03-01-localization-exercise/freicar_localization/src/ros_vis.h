@@ -27,7 +27,7 @@
 class ros_vis
 {
 public:
-    ros_vis(std::shared_ptr<ros::NodeHandle> n);
+    ros_vis(std::shared_ptr<ros::NodeHandle> n, std::string agent_name);
     void SendPoints(PointCloud<float> pts, const std::string ns, const std::string frame, float r=1.0f, float g=0.0f, float b=0.0f);
 
     void SendPoses(std::vector<Particle > poses, const std::string ns, const std::string frame);
@@ -75,6 +75,7 @@ private:
         ros::Publisher poses_pub_;
         ros::Publisher best_particle_pub_;
         std::shared_ptr<ros::NodeHandle> n_;
+        std::string agent_name;
 };
 
 #endif // ROS_VIS_H
