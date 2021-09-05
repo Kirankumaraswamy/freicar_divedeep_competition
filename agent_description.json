@@ -1,6 +1,6 @@
 {
-    "agent_name": "deploy_teamname",
-    "url": "https://aisgit.informatik.uni-freiburg.de/vertensj/freicar_demo_submission.git",
+    "agent_name": "dive_deep",
+    "url": "https://github.com/Kirankumaraswamy/freicar_divedeep_competition.git",
     "capabilities": ["simulated", "real"],
     "parameters": [
         {
