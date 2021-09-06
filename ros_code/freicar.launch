@@ -1,32 +1,22 @@
 <launch>
 <arg name="agent_name" default="freicar_1"/>
-<arg name="use_yaml_spawn" default="true"/>
-<arg name="init_x" default="0.0"/>
-<arg name="init_y" default="0.0"/>
-<arg name="heading" default="0"/>
-<arg name="map_name" default="freicar_1.aismap"/>
+  <arg name="init_x" default="1.0"/>
+  <arg name="init_y" default="0.0"/>
+  <arg name="heading" default="0"/>
+  <arg name="use_yaml_spawn" default="true"/>
+  <arg name="map_name" default="freicar_race_1"/>
+  <node pkg="freicar_sign_detect" type="freicar_sign_detect_node" name="sign_detector" output="screen">
+    <param name="agent_name" value="$(arg agent_name)"/>
+  <param name="agent_name"  type="string" value="$(arg agent_name)" />
+  </node>
 
-<param name="agent_name" value="$(arg agent_name)"/>
-<param name="use_yaml_spawn" value="$(arg use_yaml_spawn)"/>
-<param name="init_x" value="$(arg init_x)"/>
-<param name="init_y" value="$(arg init_y)"/>
-<param name="heading" value="$(arg heading)"/>
-<param name="map_name" value="$(arg map_name)"/>
-<param name="map_path" value="$(find freicar_map)/maps/$(arg map_name)"/>
-
-<node pkg="timed_roslaunch" type="timed_roslaunch.sh"
-args="1 freicar_agent sim_agent.launch name:=$(arg agent_name) tf_name:=$(arg agent_name) spawn/x:=$(arg init_x) spawn/y:=$(arg init_y) spawn/heading:=$(arg heading) use_yaml_spawn:=$(arg use_yaml_spawn) sync_topic:=!"
-name="freicar_agent" output="screen" />
-
-<node pkg="timed_roslaunch" type="timed_roslaunch.sh"
-    args="10 freicar_localization freicar_localization.launch agent_name:=$(arg agent_name) tf_name:=$(arg agent_name) init_x:=$(arg init_x) init_y:=$(arg init_y) heading:=$(arg heading) use_yaml_spawn:=$(arg use_yaml_spawn) map_name:=$(arg map_name)"
-    name="freicar_localization" output="screen" />
-
- <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
-    args="30 freicar_control start_controller.launch name:=$(arg agent_name) tf_name:=$(arg agent_name)"
-    name="freicar_control" output="screen" />
-
- <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
-     args="60 planner planner.launch agent_name:=$(arg agent_name) map_name:=$(arg map_name)"
-     name="planner" output="screen" />
+  <node pkg="freicar_localization" type="freicar_localization_node" name="freicar_localization" output="screen">
+    <param name="agent_name" value="$(arg agent_name)"/>
+    <param name="use_yaml_spawn" value="$(arg use_yaml_spawn)"/>
+    <param name="map_name" value="$(arg map_name)"/>
+    <param name="init_x" value="$(arg init_x)"/>
+    <param name="init_y" value="$(arg init_y)"/>
+    <param name="heading" value="$(arg heading)"/>
+    <param name="map_path" value="$(find freicar_map)/maps/$(arg map_name)"/>
+    </node>
 </launch>
