@@ -36,7 +36,7 @@ Localizer::Localizer(std::shared_ptr<ros::NodeHandle> n) : n_(n), it_(*n) {
 
     ros::Duration sleep_time(1);
     odo_sub_ = n_->subscribe(agent_name+"/odometry", 1, &Localizer::OdoCallback, this);
-    marker_sub_ = n_->subscribe("/traffic_signs", 1, &Localizer::markerCallback, this);
+    marker_sub_ = n_->subscribe(agent_name"/traffic_signs", 1, &Localizer::markerCallback, this);
     last_odo_update_ = ros::Time::now();
 
     freicar::map::ThriftMapProxy map_proxy("127.0.0.1", 9091, 9090);
