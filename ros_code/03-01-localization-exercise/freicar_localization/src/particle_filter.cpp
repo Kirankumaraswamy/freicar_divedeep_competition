@@ -151,14 +151,15 @@ void particle_filter::InitParticles(){
     //std::uniform_real_distribution<float> generate_x(maxes_mins[0], maxes_mins[1]);
     //std::uniform_real_distribution<float> generate_y(maxes_mins[2], maxes_mins[3]);
     //std::uniform_real_distribution<float> generate_rot(-M_PI, M_PI);_
-    float init_x, init_y;
+    float init_x, init_y, heading;
 
     ros::param::get("/freicar_"+agent_name+"_carla_proxy/spawn/x", init_x);
     ros::param::get("/freicar_"+agent_name+"_carla_proxy/spawn/y", init_y);
+    ros::param::get("/freicar_"+agent_name+"_carla_proxy/spawn/heading", heading);
 
-    std::uniform_real_distribution<float> generate_x(init_x - 0.2, init_x + 0.2);
-    std::uniform_real_distribution<float> generate_y(init_y - 0.2, init_y + 0.2);
-    std::uniform_real_distribution<float> generate_rot(-M_PI, M_PI);
+    std::uniform_real_distribution<float> generate_x(init_x, init_x);
+    std::uniform_real_distribution<float> generate_y(init_y, init_y);
+    std::uniform_real_distribution<float> generate_rot(heading, heading);
 
     for(int i=0;i<sizeOfParticles-1;i++){
         Particle particle;
@@ -456,7 +457,7 @@ bool particle_filter::ObservationStep(const std::vector<cv::Mat> reg, const std:
     const std::vector<Sign> car_signs = transformSignsToCarBaseLink(observed_signs); // inline
 
     // We only want to resample if everything is initialized and if we drive at least 0.1 m/s.
-    if(odo_init_ && particles_init_ && abs(latest_x_vel) > 0.1){
+    if(odo_init_ && particles_init_ && abs(latest_x_vel) >= 0.05){
 //    if(odo_init_ && particles_init_ ){
         high_resolution_clock::time_point t1 = high_resolution_clock::now();
         float best_val =  0.0;

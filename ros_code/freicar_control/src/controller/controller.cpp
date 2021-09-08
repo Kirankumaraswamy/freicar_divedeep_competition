@@ -157,8 +157,9 @@ controller::controller():pos_tol_(0.1), idx_(0),
     nh_private_.param<double>("wheelbase", L_, 0.36);
 
     nh_private_.param<double>("position_tolerance", pos_tol_, 0.1);
-    nh_private_.param<double>("steering_angle_limit", delta_max_, 1.22173);
-    nh_private_.param<float>("desired_velocity", des_v_, 0.2);
+    nh_private_.param<double>("steering_angle_limit", delta_max_, 2);
+    nh_private_.param<float>("desired_velocity", des_v_, 0.11);
+    nh_private_.param<float>("throttle_limit", throttle_limit_, 0.05);
 
     nh_private_.param<std::string>("map_frame_id", map_frame_id_, "map");
     nh_private_.param<float>("vmax", vmax_, 5.0);
@@ -176,9 +177,8 @@ controller::controller():pos_tol_(0.1), idx_(0),
 
     // Subscribers to path segment and odometry
     sub_path_ = nh_.subscribe(agent_name + "/path_segment", 1, &controller::receivePath, this);
-    sub_odom_ = nh_.subscribe(agent_name + "/odometry", 1, &controller::controller_step, this);
-
-    // Publishers for the control command and the "reached" message
+    sub_odom_ = nh_.subscribe(agent_name + "/best_particle", 1, &controller::controller_step1, this);
+    // Publishers for the control command and the "reached" message.
     pub_acker_ = nh_.advertise<raiscar_msgs::ControlCommand>(agent_name + "/control", 1);
     pub_goal_reached_ = nh_.advertise<std_msgs::Bool>(agent_name + "/goal_reached", 1);
     completion_advertised_ = false;

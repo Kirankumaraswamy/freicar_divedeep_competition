@@ -36,7 +36,7 @@ Localizer::Localizer(std::shared_ptr<ros::NodeHandle> n) : n_(n), it_(*n) {
 
     ros::Duration sleep_time(1);
     odo_sub_ = n_->subscribe(agent_name+"/odometry", 1, &Localizer::OdoCallback, this);
-    marker_sub_ = n_->subscribe(agent_name"/traffic_signs", 1, &Localizer::markerCallback, this);
+    marker_sub_ = n_->subscribe(agent_name+"/traffic_signs", 1, &Localizer::markerCallback, this);
     last_odo_update_ = ros::Time::now();
 
     freicar::map::ThriftMapProxy map_proxy("127.0.0.1", 9091, 9090);
@@ -147,8 +147,8 @@ void Localizer::OdoCallback(const nav_msgs::OdometryConstPtr &msg) {
     // Apply motion model to all particles
     p_filter->MotionStep(*msg);
 
-    //visualizer_->SendBestParticle(p_filter->getBestParticle(), "/map");
-    Particle best_particle = p_filter->getMeanParticle(1000);
+    visualizer_->SendBestParticle(p_filter->getBestParticle(), "/map");
+    Particle best_particle = p_filter->getMeanParticle(500);
     visualizer_->SendBestParticle(best_particle, "map");
     last_odo_update_ = msg->header.stamp;
 
@@ -296,7 +296,7 @@ int main(int argc, char **argv) {
 
     std::shared_ptr<ros::NodeHandle> n = std::make_shared<ros::NodeHandle>();
 
-    ros::Rate loop_rate(100);
+    ros::Rate loop_rate(250);
 
     std::cout << "Particle filter localization node started: " << std::endl;
 

@@ -52,25 +52,31 @@
 #include <tf2/convert.h>
 #include <tf2/utils.h>
 #include "Eigen/Dense"
+#include "freicar_common/FreiCarAgentLocalization.h"
 
 class planner{
 public:
     planner(std::shared_ptr<ros::NodeHandle> n);
     std::shared_ptr<ros::NodeHandle> n_;
 
-    void ExtControlCallback(const freicar_common::FreiCarControl::ConstPtr &ctrl_cmd);
-    void CommandNewPlanner(bool goal_reach_flg, bool cmd_changed_flag);
-    void GoalReachedStatus(const std_msgs::Bool reached);
-    void GetParticles(const nav_msgs::Odometry msg);
-    void GetParticles1(const geometry_msgs::PoseArray msg);
+    void ExecuteCommand(const freicar_common::FreiCarControl::ConstPtr &ctrl_cmd);
+    void PublishNewPlan();
+    void GoalReachedStatusReceived(const std_msgs::Bool reached);
+    void InitializeBestParticle1(const nav_msgs::Odometry msg);
+    void InitializeBestParticle2(const freicar_common::FreiCarAgentLocalization msg);
+    void InitializeBestParticle(const geometry_msgs::PoseArray msg);
 
     std::vector<freicar::mapobjects::Point3D>OvertakePlan();
+    ros::Subscriber freicar_commands;
+
+    freicar::mapobjects::Point3D current_position ;
 
     ros::Subscriber sub;
-    ros::Subscriber goal_reached,depth_info;
-    ros::Subscriber freicar_commands;
+    ros::Subscriber goal_reached_a,depth_info;
+    ros::Subscriber external_control_sub;
     ros::Subscriber boundingbox_sub;
     ros::Subscriber request_overtake;
+
 
     ros::Publisher path_segment;
     ros::Publisher tf,overtake_plan;
@@ -78,32 +84,22 @@ public:
     ros::Publisher right_of_way_status;
     ros::Publisher Overtake_status;
 
-    freicar::mapobjects::Point3D start_point ;
-    std_msgs::Bool car_stop_status,standing_vehicle;
-    std::string old_lane_uuid;
-
-    float start_angle = 0.0;
-    bool car_depth_ = false;
-    bool Send_Overtake_plan = false;
-    ros::Time time_when_last_stopped;
-    ros::Time last_time_of_no_right_of_way;
-    tf2_ros::Buffer tf_buffer_;
-
     std::string agent_name, map_name, map_path;
     float init_x, init_y, heading;
     bool use_yaml_spawn;
 
+    tf2_ros::Buffer tf_buffer_;
+
+
+
 private:
     freicar::enums::PlannerCommand command = freicar::enums::PlannerCommand::STRAIGHT;
-    std::string planner_cmd;
-    bool goal_reached_flag;
+    bool goal_reached;
     bool command_changed = false;
-    std_msgs::Bool right_of_way;
-
     tf2_ros::TransformListener tf_obs_agent_listener;
 
-    int findPathDescription(freicar::mapobjects::Lane::Connection description);
 
+    int findPathDescription(freicar::mapobjects::Lane::Connection description);
 };
 
 

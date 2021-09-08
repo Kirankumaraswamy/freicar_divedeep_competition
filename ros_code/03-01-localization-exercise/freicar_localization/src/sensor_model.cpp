@@ -178,7 +178,7 @@ bool sensor_model::calculatePoseProbability(const std::vector<cv::Mat> lane_regr
 
     // Hint: The following code line can be used for transforming the sign positions using the particles pose.
     float total_weight = 0;
-    float LANE_POINTS_THRESHOLD = 3;
+    //float LANE_POINTS_THRESHOLD = 3;
     if(observed_signs.size()>0){
         for(int i=0;i<particles.size();i++){
             //Transform the observed signs from freicar_x/base_link to map frame using the transform from the any particle present in map frame.

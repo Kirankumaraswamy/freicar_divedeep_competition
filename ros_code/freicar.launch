@@ -1,10 +1,13 @@
 <launch>
-<arg name="agent_name" default="freicar_1"/>
+<arg name="agent_name" default="greatteam"/>
 <arg name="use_yaml_spawn" default="true"/>
 <arg name="init_x" default="0.0"/>
 <arg name="init_y" default="0.0"/>
 <arg name="heading" default="0"/>
 <arg name="map_name" default="freicar_1.aismap"/>
+<arg name="desired_velocity" default="0.11"/>
+<arg name="lookahead_dist" default="0.8"/>
+<arg name="throttle_limit" default="0.06"/>
 
 <param name="agent_name" value="$(arg agent_name)"/>
 <param name="use_yaml_spawn" value="$(arg use_yaml_spawn)"/>
@@ -13,6 +16,9 @@
 <param name="heading" value="$(arg heading)"/>
 <param name="map_name" value="$(arg map_name)"/>
 <param name="map_path" value="$(find freicar_map)/maps/$(arg map_name)"/>
+<param name="desired_velocity" value="$(arg desired_velocity)"/>
+<param name="lookahead_dist" value="$(arg lookahead_dist)"/>
+<param name="throttle_limit" value="$(arg throttle_limit)"/>
 
 <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
 args="1 freicar_agent sim_agent.launch name:=$(arg agent_name) tf_name:=$(arg agent_name) spawn/x:=$(arg init_x) spawn/y:=$(arg init_y) spawn/heading:=$(arg heading) use_yaml_spawn:=$(arg use_yaml_spawn) sync_topic:=!"
@@ -23,10 +29,10 @@ name="freicar_agent" output="screen" />
     name="freicar_localization" output="screen" />
 
  <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
-    args="30 freicar_control start_controller.launch name:=$(arg agent_name) tf_name:=$(arg agent_name)"
+    args="10 freicar_control start_controller.launch name:=$(arg agent_name) tf_name:=$(arg agent_name) desired_velocity:=$(arg desired_velocity) lookahead_dist:=$(arg lookahead_dist) throttle_limit:=$(arg throttle_limit) "
     name="freicar_control" output="screen" />
 
- <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
-     args="60 planner planner.launch agent_name:=$(arg agent_name) map_name:=$(arg map_name)"
-     name="planner" output="screen" />
+<node pkg="timed_roslaunch" type="timed_roslaunch.sh"
+args="10 planner planner.launch agent_name:=$(arg agent_name) map_name:=$(arg map_name)"     name="planner" output="screen" />
+
 </launch>

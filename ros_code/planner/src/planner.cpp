@@ -3,85 +3,112 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include "geometry_msgs/PoseArray.h"
-#include <freicar_map/planning/lane_star.h>
 #include <freicar_map/planning/lane_follower.h>
 #include <freicar_map/thrift_map_proxy.h>
 #include "map_core/freicar_map.h"
 #include "freicar_common/shared/planner_cmd.h"
 #include <cstdio>
 #include "nav_msgs/Path.h"
-#include <visualization_msgs/MarkerArray.h>
 #include "raiscar_msgs/ControllerPath.h"
+#include "freicar_common/FreiCarAgentLocalization.h"
 
 planner::planner(std::shared_ptr<ros::NodeHandle> n): n_(n), tf_obs_agent_listener(tf_buffer_)
 {
     n_->param<std::string>("agent_name", agent_name, "freicar_1");
-    n_->param<bool>("use_yaml_spawn", use_yaml_spawn, true);
-    //n_->param<float>("init_x", init_x, 1.0);
-    //n_->param<float>("init_y", init_y, 0);
-    n_->param<float>("heading", heading, 0);
     n_->param<std::string>("map_name", map_name, "freicar_1.aismap");
-    //n_->param<std::string>("map_path", map_path, "map_path");
-    std::cout <<agent_name <<" " <<use_yaml_spawn <<" " <<init_x <<" " <<init_y <<" " <<heading <<" "<<map_name <<std::endl;
 
 
-    sub = n_->subscribe(agent_name+"/best_particle", 10, &planner::GetParticles1, this);
-    //sub = n_->subscribe(agent_name+"/odometry", 10, &planner::GetParticles, this);
-    goal_reached = n_->subscribe(agent_name+"/goal_reached", 10, &planner::GoalReachedStatus, this);
-    //request_overtake = n_->subscribe("freicar_1/request_overtake",1, &plan_publisher::RequestOvertakeStatus,this);
-    //depth_info = n_->subscribe("/car_ahead", 1, &plan_publisher::DepthInfoStatus, this);
+    //sub = n_->subscribe(agent_name+"/best_particle", 10, &planner::InitializeBestParticle, this);
+    //sub = n_->subscribe(agent_name+"/odometry", 10, &planner::InitializeBestParticle1, this);
+    sub = n_->subscribe("car_localization", 10, &planner::InitializeBestParticle2, this);
+    goal_reached_a = n_->subscribe(agent_name+"/goal_reached", 10, &planner::GoalReachedStatusReceived, this);
 
-    freicar_commands = n_->subscribe("/freicar_commands",5 , &planner::ExtControlCallback, this);
+    freicar_commands = n_->subscribe("/freicar_commands",10 , &planner::ExecuteCommand, this);
     //boundingbox_sub = n_->subscribe("/bbsarray", 1, &plan_publisher::BoundingBoxCallback, this);
     path_segment = n_->advertise<raiscar_msgs::ControllerPath>(agent_name+"/path_segment", 10);
-    //path_segment = n_->advertise<raiscar_msgs::ControllerPath>("/freicar_1/path_segment", 10);
-    //stopline_status = n_->advertise<std_msgs::Bool>("stopline_status", 1);
-    //right_of_way_status = n_->advertise<std_msgs::Bool>("right_of_way", 1);
-    //Overtake_status = n_->advertise<std_msgs::Bool>("Standing_Vehicle", 1);
+    std::cout << "Initialize ....." << std::endl;
 
-    //tf = n_->advertise<visualization_msgs::MarkerArray>("planner_debug", 10, true);
+    tf = n_->advertise<visualization_msgs::MarkerArray>("planner_debug", 10, true);
     //right_of_way.data = true;
     //overtake_plan = n_->advertise<visualization_msgs::MarkerArray>("overtake_planner", 10, true);
 
 }
 
-void planner::GoalReachedStatus(const std_msgs::Bool reached) {
-    goal_reached_flag = reached.data;
-    if(!command_changed){
-        CommandNewPlanner(goal_reached_flag, command_changed);
+void PublishPlan (freicar::planning::Plan& plan, double r, double g, double b, int id, const std::string& name, ros::Publisher& pub) {
+    visualization_msgs::MarkerArray list;
+    visualization_msgs::Marker *step_number = new visualization_msgs::Marker[plan.size()];
+    int num_count = 0;
+    visualization_msgs::Marker plan_points;
+    plan_points.id = id;
+    plan_points.ns = name;
+    plan_points.header.stamp = ros::Time();
+    plan_points.header.frame_id = "map";
+    plan_points.action = visualization_msgs::Marker::ADD;
+    plan_points.type = visualization_msgs::Marker::POINTS;
+    plan_points.scale.x = 0.03;
+    plan_points.scale.y = 0.03;
+    plan_points.pose.orientation = geometry_msgs::Quaternion();
+    plan_points.color.b = b;
+    plan_points.color.a = 0.7;
+    plan_points.color.g = g;
+    plan_points.color.r = r;
+    geometry_msgs::Point p;
+    for (size_t i = 0; i < plan.size(); ++i) {
+        step_number[i].id = ++num_count + id;
+        step_number[i].pose.position.x = p.x = plan[i].position.x();
+        step_number[i].pose.position.y = p.y = plan[i].position.y();
+        p.z = plan[i].position.z();
+        step_number[i].pose.position.z = plan[i].position.z() + 0.1;
+        step_number[i].pose.orientation = geometry_msgs::Quaternion();
+        step_number[i].ns = name + "_nums";
+        step_number[i].header.stamp = ros::Time();
+        step_number[i].header.frame_id = "map";
+        step_number[i].action = visualization_msgs::Marker::ADD;
+        step_number[i].type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+        step_number[i].text = std::to_string(i);
+        step_number[i].scale.z = 0.055;
+        step_number[i].color = plan_points.color;
+        list.markers.emplace_back(step_number[i]);
+        plan_points.points.emplace_back(p);
     }
-    goal_reached_flag = false; //reset the flag
+    list.markers.emplace_back(plan_points);
+    pub.publish(list);
+    delete[] step_number;
 }
 
-void planner::ExtControlCallback(const freicar_common::FreiCarControl::ConstPtr &ctrl_cmd)
+void planner::GoalReachedStatusReceived(const std_msgs::Bool goal_message) {
+    goal_reached = goal_message.data;
+    command_changed = false;
+    if(goal_reached == true){
+        PublishNewPlan();
+    }
+    goal_reached = false;
+
+    std::cout << "Goal Reached ....." << std::endl;
+}
+
+void planner::ExecuteCommand(const freicar_common::FreiCarControl::ConstPtr &control_command)
 {
-    if(ctrl_cmd->name == agent_name){
-        goal_reached_flag = false;
-        planner_cmd = ctrl_cmd->command;
-        if(planner_cmd == "right")
-        {
-            command = freicar::enums::PlannerCommand::RIGHT;
-            command_changed = true;
+    std::cout << "Command Reached ....." << std::endl;
+    if(control_command->name == agent_name){
+        command_changed = true;
+        goal_reached = false;
+        std::string cmd = control_command->command;
+
+        if(cmd == "start")        {
+            command = freicar::enums::PlannerCommand::STRAIGHT;
         }
-        else if(planner_cmd == "left")
-        {
+        else if(cmd == "left")        {
             command = freicar::enums::PlannerCommand::LEFT;
-            command_changed = true;
         }
-        else if(planner_cmd == "right")
-        {
+        else if(cmd == "right")        {
             command = freicar::enums::PlannerCommand::RIGHT;
-            command_changed = true;
         }
-        else if(planner_cmd == "straight")
+        else if(cmd == "straight")
         {
             command = freicar::enums::PlannerCommand::STRAIGHT;
-            command_changed = true;
         }
-
-        if(!goal_reached_flag) {
-            CommandNewPlanner(goal_reached_flag, command_changed);
-        }
+        PublishNewPlan();
     }
     else{
         command_changed = false; //command changes flag reset
@@ -89,35 +116,36 @@ void planner::ExtControlCallback(const freicar_common::FreiCarControl::ConstPtr 
 
 }
 
-//Listens to higher level commands and plans accordingly
-void planner::CommandNewPlanner(bool goal_reach_flg, bool cmd_changed_flag) {
-    if(goal_reach_flg || cmd_changed_flag){
-        geometry_msgs::PoseStamped pose_msg;
-        raiscar_msgs::ControllerPath rais_control_msg;
-        ROS_INFO("PATH Published .....");
-        auto lane_plan = freicar::planning::lane_follower::GetPlan(start_point, command, 8, 40);
+void planner::PublishNewPlan() {
+    geometry_msgs::PoseStamped pose_msg;
+    raiscar_msgs::ControllerPath rais_control_msg;
 
-        // To publish on RVIZ
-        //PublishPlan(lane_plan, 0.0, 1.0, 0.0, 300, "plan_1", tf);
+    auto plan = freicar::planning::lane_follower::GetPlan(current_position, command, 8, 80);
 
-        // To publish on ROS
-        rais_control_msg.path_segment.header.stamp = ros::Time::now();
-        rais_control_msg.path_segment.header.frame_id = "map";
-        rais_control_msg.path_segment.header.seq = 0;
+    PublishPlan(plan, 0.0, 1.0, 0.0, 300, "plan_1", tf);
 
-        // To publish on ROS
-        for(size_t i = 0; i < lane_plan.steps.size(); ++i) {
-            pose_msg.pose.position.x = lane_plan.steps[i].position.x();
-            pose_msg.pose.position.y = lane_plan.steps[i].position.y();
-            pose_msg.pose.position.z = lane_plan.steps[i].position.z();
-            /* Orientation used as a proxy for sending path description */
-            //pose_msg.pose.orientation.w = findPathDescription(lane_plan.steps[i].path_description);
-            rais_control_msg.path_segment.poses.push_back(pose_msg);
-        }
-        path_segment.publish(rais_control_msg);
+    rais_control_msg.path_segment.header.stamp = ros::Time::now();
+    rais_control_msg.path_segment.header.frame_id = "map";
+    rais_control_msg.path_segment.header.seq = 0;
 
+    for(size_t i = 0; i < plan.steps.size(); ++i) {
+        pose_msg.pose.position.x = plan.steps[i].position.x();
+        pose_msg.pose.position.y = plan.steps[i].position.y();
+        pose_msg.pose.position.z = plan.steps[i].position.z();
+
+        //pose_msg.pose.orientation.w = plan.steps[i].path_description;
+        pose_msg.pose.orientation.w = findPathDescription(plan.steps[i].path_description);
+        std::cout << i << " " << plan.steps[i].position.x()<< " "<< plan.steps[i].position.y()<< " " << plan.steps[i].path_description << " " << pose_msg.pose.orientation.w<<std::endl;
+        rais_control_msg.path_segment.poses.push_back(pose_msg);
     }
+    path_segment.publish(rais_control_msg);
+    std::cout << "Path Published ....." << command <<std::endl;
+    ROS_INFO("PATH published...................");
+    //reset the command to straight
+    command = freicar::enums::PlannerCommand::STRAIGHT;
 }
+
+
 
 int planner::findPathDescription(freicar::mapobjects::Lane::Connection description) {
     /*
@@ -162,64 +190,22 @@ int planner::findPathDescription(freicar::mapobjects::Lane::Connection descripti
     return converted;
 }
 
-// Call back function to get the current location of the car.
-void planner::GetParticles(const nav_msgs::Odometry msg){
-    // Fetching the current location of the car which is plan's starting point
+
+void planner::InitializeBestParticle1(const nav_msgs::Odometry msg){
     freicar::mapobjects::Point3D current_point(msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z);
-    start_point = current_point;
+    current_position = current_point;
     std::cout << "Odometry: " <<  msg.pose.pose.position.x <<", "<< msg.pose.pose.position.y << std::endl;
-    /*double x_ang = msg.pose.pose.position.x;
-    double y_ang = msg.pose.pose.position.y;
-    double z_ang = msg.pose.pose.position.z;
-    double w_ang = msg.pose.pose.orientation.w;
-    start_angle = atan2(2.0f * (w_ang * z_ang + x_ang * y_ang), 1.0f - 2.0f * (y_ang * y_ang + z_ang * z_ang));
-
-    // To Fetch the current lane.
-    const freicar::mapobjects::Lane *current_lane;
-    auto &map = freicar::map::Map::GetInstance();
-    auto p_closest = map.FindClosestLanePoints(current_point.x(), current_point.y(), current_point.z(), 1)[0].first;
-    auto current_lane_uuid = p_closest.GetLaneUuid();
-    current_lane = map.FindLaneByUuid(current_lane_uuid);
-
-    // To Fetch the sign boards connected to the current lane.
-    freicar::mapobjects::Point3D stoplinepos;
-    float distance;
-    // If stop sign detected.
-    if(current_lane->HasRoadSign("Stop")) {
-        const freicar::mapobjects::Stopline *stopline = current_lane->GetStopLine();
-        stoplinepos = stopline->GetPosition();
-        distance = stoplinepos.ComputeDistance(current_point);
-        if(distance < 0.7){
-            car_stop_status.data = true;
-        }
-    }
-        // No stop sign detected.
-    else {
-        car_stop_status.data = false;
-    }
-    ros::Time now = ros::Time::now();
-    // If car needed to be stopped and for a different lane than before.
-    if(car_stop_status.data == true) {
-        if (current_lane_uuid != old_lane_uuid) {
-            old_lane_uuid = current_lane_uuid;
-            stopline_status.publish(car_stop_status);
-            time_when_last_stopped = ros::Time::now();
-            car_stop_status.data = false;
-        }
-        else if((current_lane_uuid == old_lane_uuid) && ((now-time_when_last_stopped).toSec() > 10)){
-            old_lane_uuid = current_lane_uuid;
-            stopline_status.publish(car_stop_status);
-            time_when_last_stopped = ros::Time::now();
-            car_stop_status.data = false;
-        }
-    }*/
 }
 
-// Call back function to get the current location of the car.
-void planner::GetParticles1(const geometry_msgs::PoseArray msg){
-    // Fetching the current location of the car which is plan's starting point
+void planner::InitializeBestParticle2(const freicar_common::FreiCarAgentLocalization msg){
+    freicar::mapobjects::Point3D current_point(msg.current_pose.transform.translation.x, msg.current_pose.transform.translation.y, msg.current_pose.transform.translation.z);
+    current_position = current_point;
+    std::cout << "Car Local: " <<  msg.current_pose.transform.translation.x <<", "<< msg.current_pose.transform.translation.y << std::endl;
+}
+
+void planner::InitializeBestParticle(const geometry_msgs::PoseArray msg){
     freicar::mapobjects::Point3D current_point(msg.poses.data()->position.x, msg.poses.data()->position.y, msg.poses.data()->position.z);
-    start_point = current_point;
+    current_position = current_point;
     std::cout << "Localization: " <<  msg.poses.data()->position.x <<", "<< msg.poses.data()->position.y << std::endl;
 }
 

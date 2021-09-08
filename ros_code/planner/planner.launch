@@ -11,7 +11,7 @@
     <param name="init_x" value="$(arg init_x)"/>
     <param name="init_y" value="$(arg init_y)"/>
     <param name="heading" value="$(arg heading)"/>
-    <param name="map_namefrer" value="$(arg map_name)"/>
+    <param name="map_name" value="$(arg map_name)"/>
     <param name="map_path" value="$(find freicar_map)/maps/$(arg map_name)"/>
   </node>
 </launch>

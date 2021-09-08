@@ -60,33 +60,45 @@ PurePursuit::PurePursuit()
 void PurePursuit::controller_step(nav_msgs::Odometry odom) {
     // Code blocks that could be useful:
     // The following code block could receive the current pose (saved in map_t_ra)
-    geometry_msgs::TransformStamped tf_msg, ra_t_map_msg;
+    geometry_msgs::TransformStamped tf_msg, ra_t_map_msg, fa_t_map_msg;
     geometry_msgs::TransformStamped front_axis_tf_msg;
     tf2::Stamped <tf2::Transform> map_t_ra;
     tf2::Stamped <tf2::Transform> ra_t_map;
+    tf2::Stamped <tf2::Transform> fa_t_map;
+
+
     try {
         //converting map frame to rear axis
         tf_msg = tf_buffer_.lookupTransform(rear_axis_frame_id_, map_frame_id_, ros::Time(0));
         //converting rear axis to map frame
         ra_t_map_msg = tf_buffer_.lookupTransform(map_frame_id_, rear_axis_frame_id_, ros::Time(0));
+
+        //converting front axis to map frame
+        fa_t_map_msg = tf_buffer_.lookupTransform(map_frame_id_, front_axis_frame_id_, ros::Time(0));
     } catch (tf2::TransformException &ex) {
         ROS_WARN_STREAM(ex.what());
     }
     tf2::convert(tf_msg, map_t_ra);
     tf2::convert(ra_t_map_msg, ra_t_map);
+    tf2::convert(fa_t_map_msg, fa_t_map);
+
     double steering_angle = 0;
     double vel = 0;
     bool brake = false;
     double x_ld, y_ld;
 
-    //Calculating car orientation using w.r.t map frame using rear axis and odometry(center of the car) w.r.t map frame
-    double car_angle = atan2((odom.pose.pose.position.y - ra_t_map.getOrigin().y()),
-                             (odom.pose.pose.position.x - ra_t_map.getOrigin().x())) * (180 / 3.142);
+    float car_x = (fa_t_map.getOrigin().x() + ra_t_map.getOrigin().x())/2;
+    float car_y = (fa_t_map.getOrigin().y() + ra_t_map.getOrigin().y())/2;
 
-    if (!path_.size() > 0) {
-        completion_advertised_ = false;
-    }
+    //Calculating car orientation using w.r.t map frame using rear axis and odometry(center of the car) w.r.t map frame
+    double car_angle = atan2((fa_t_map.getOrigin().y() - ra_t_map.getOrigin().y()),
+                             (fa_t_map.getOrigin().x() - ra_t_map.getOrigin().x())) * (180 / 3.142);
+
+    //if (!path_.size() > 0) {
+        //completion_advertised_ = false;
+    //}
     if (path_.size() > 0 && !goal_reached_) {
+
         tf2::Transform t1, t2;
         double d1, d2;
         double x1, y1, z1;
@@ -110,10 +122,10 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
             d2 = sqrt(pow(x2, 2) + pow(y2, 2) + pow(z2, 2));
 
             //These distance are used to cross track error
-            double odom_dist1 = sqrt(pow(path_.at(i - 1).getOrigin().x() - odom.pose.pose.position.x, 2) +
-                                     pow(path_.at(i - 1).getOrigin().y() - odom.pose.pose.position.y, 2));
-            double odom_dist2 = sqrt(pow(path_.at(i).getOrigin().x() - odom.pose.pose.position.x, 2) +
-                                     pow(path_.at(i).getOrigin().y() - odom.pose.pose.position.y, 2));
+            double odom_dist1 = sqrt(pow(path_.at(i - 1).getOrigin().x() - car_x, 2) +
+                                     pow(path_.at(i - 1).getOrigin().y() - car_y, 2));
+            double odom_dist2 = sqrt(pow(path_.at(i).getOrigin().x() - car_x, 2) +
+                                     pow(path_.at(i).getOrigin().y() - car_y, 2));
 
             //Calculating slope of 2 points in rear axis frame
             double m = (y2 - y1) / (x2 - x1);
@@ -130,7 +142,7 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
                 C = path_.at(i - 1).getOrigin().y() - map_m * path_.at(i - 1).getOrigin().x();
                 //perpendicular distance between the point(middle of car axis) and the line(formed by 2 path points)
                 cross_track_error_dist =
-                        abs(A * odom.pose.pose.position.x + B * odom.pose.pose.position.y + C) / sqrt(A * A + B * B);
+                        abs(A * ra_t_map.getOrigin().x() + B * ra_t_map.getOrigin().y() + C) / sqrt(A * A + B * B);
                 //std::cout<<"index : " << i <<" d: " << minimum_dist << " error: " << cross_track_error_dist<<std::endl;
                 path_angle = atan(map_m) * (180 / 3.142);
                 //std::cout<<" index:" << i << std::endl;
@@ -149,9 +161,9 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
                 y_ld = k_end * x_ld + l_end;
 
                 //set the steering angle corresponding to look ahead point w.r.t to rear axis frame
-                steering_angle = std::min(atan2(2 * y_ld * L_, ld_dist_ * ld_dist_), delta_max_);
+                steering_angle =  std::min( atan2(2 * y_ld * L_, ld_dist_ * ld_dist_)  + m * 0.2, delta_max_ );
                 //hard coded velocity value
-                vel = 0.11;
+                vel = des_v_ ;
                 break;
             }
             //if we can't find the best two neigboring path points, it means we have almost approched goal.
@@ -212,17 +224,17 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
     target_p_.transform.translation.x = x_ld; // dummy value
     target_p_.transform.translation.y = y_ld; // dummy value
     target_p_.transform.translation.z = 0; // dummy value
-    target_p_.header.frame_id = rear_axis_frame_id_;
+    target_p_.header.frame_id = map_frame_id_;
+    target_p_.header.stamp = odom.header.stamp;
     target_p_.header.stamp = ros::Time::now();
     tf_broadcaster_.sendTransform(target_p_);
+
     // The following code block can be used to control a certain velocity using PID control
-//    double pid_vel_out = 0.0;
-//    if (vel >= 0) {
-//        pid_vel_out = vel_pid.step((vel - odom.twist.twist.linear.x), ros::Time::now());
-//    } else {
-//        pid_vel_out = vel;
-//        vel_pid.resetIntegral();
-//    }
+    //double pid_vel_out = 0.0;
+//else {
+    //    pid_vel_out = vel;
+    //    vel_pid.resetIntegral();
+   // }
     // The following code block can be used to send control commands to the car
     //setting the boundries of streeing angle
     //steering_angle = std::min(1.0, std::max(-1.0, steering_angle));
@@ -243,32 +255,39 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
     {
         // Code blocks that could be useful:
         // The following code block could receive the current pose (saved in map_t_ra)
-        geometry_msgs::TransformStamped tf_msg, ra_t_map_msg;
+        geometry_msgs::TransformStamped tf_msg, ra_t_map_msg, fa_t_map_msg;
         geometry_msgs::TransformStamped front_axis_tf_msg;
-        tf2::Stamped<tf2::Transform> map_t_ra;
-        tf2::Stamped<tf2::Transform> ra_t_map;
-        try{
+        tf2::Stamped <tf2::Transform> map_t_ra;
+        tf2::Stamped <tf2::Transform> ra_t_map;
+        tf2::Stamped <tf2::Transform> fa_t_map;
+
+
+        try {
             //converting map frame to rear axis
             tf_msg = tf_buffer_.lookupTransform(rear_axis_frame_id_, map_frame_id_, ros::Time(0));
             //converting rear axis to map frame
             ra_t_map_msg = tf_buffer_.lookupTransform(map_frame_id_, rear_axis_frame_id_, ros::Time(0));
-        }catch (tf2::TransformException &ex)
-        {
+
+            //converting front axis to map frame
+            fa_t_map_msg = tf_buffer_.lookupTransform(map_frame_id_, front_axis_frame_id_, ros::Time(0));
+        } catch (tf2::TransformException &ex) {
             ROS_WARN_STREAM(ex.what());
         }
         tf2::convert(tf_msg, map_t_ra);
         tf2::convert(ra_t_map_msg, ra_t_map);
+        tf2::convert(fa_t_map_msg, fa_t_map);
+
         double steering_angle = 0 ;
         double vel = 0;
         bool brake=false;
         double x_ld, y_ld;
 
+        float car_x = (fa_t_map.getOrigin().x() + ra_t_map.getOrigin().x())/2;
+        float car_y = (fa_t_map.getOrigin().y() + ra_t_map.getOrigin().y())/2;
+
         //Calculating car orientation using w.r.t map frame using rear axis and odometry(center of the car) w.r.t map frame
         double car_angle = atan2((msg.poses.data()->position.y-ra_t_map.getOrigin().y()), (msg.poses.data()->position.x-ra_t_map.getOrigin().x())) * (180/3.142);
 
-        if(!path_.size() >0){
-            completion_advertised_ = false;
-        }
         if(path_.size() > 0 && !goal_reached_){
             tf2::Transform t1, t2;
             double d1, d2;
@@ -325,13 +344,17 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
                     x_ld = (-b + copysign(D, vmax_)) / (2*a);
                     y_ld = k_end * x_ld + l_end;
 
+
                     //set the steering angle corresponding to look ahead point w.r.t to rear axis frame
-                    steering_angle =  std::min( atan2(2 * y_ld * L_, ld_dist_ * ld_dist_), delta_max_ );
+                    //adding some noise based on curvature to steering angle.
+                    steering_angle =  std::min( atan2(2 * y_ld * L_, ld_dist_ * ld_dist_)  + m * 0.15, delta_max_ );
                     //hard coded velocity value
-                    vel = 0.11 ;
+                    vel = des_v_ ;
                     break;
                 }
+                double last_path_ld_distance = sqrt(pow(x_ld - x2, 2) + pow(y_ld - y2, 2));
                 //if we can't find the best two neigboring path points, it means we have almost approched goal.
+                //if the distance of the current point to
                 if(i >= path_.size()-1) {
                     goal_reached_ = true;
                     completion_advertised_ = false;
@@ -395,18 +418,20 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
     target_p_.header.stamp = ros::Time::now();
     tf_broadcaster_.sendTransform(target_p_);
     // The following code block can be used to control a certain velocity using PID control
-//    double pid_vel_out = 0.0;
-//    if (vel >= 0) {
-//        pid_vel_out = vel_pid.step((vel - odom.twist.twist.linear.x), ros::Time::now());
-//    } else {
-//        pid_vel_out = vel;
-//        vel_pid.resetIntegral();
-//    }
+    //double pid_vel_out = 0.0;
+    //if (vel >= 0) {
+    //    pid_vel_out = vel_pid.step((vel - odom.twist.twist.linear.x), ros::Time::now());
+    //} else {
+    ////    pid_vel_out = vel;
+     //   vel_pid.resetIntegral();
+    //}
     // The following code block can be used to send control commands to the car
     //setting the boundries of streeing angle
     //steering_angle = std::min(1.0, std::max(-1.0, steering_angle));
+
+
     cmd_control_.steering = steering_angle;
-    cmd_control_.throttle =  vel;
+    cmd_control_.throttle =  vel - vel*abs(steering_angle);
     cmd_control_.throttle_mode = 0;
     cmd_control_.brake = brake;
     //cmd_control_.throttle = std::min(cmd_control_.throttle, throttle_limit_);

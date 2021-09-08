@@ -4,7 +4,7 @@
   <arg name="init_y" default="0.0"/>
   <arg name="heading" default="0"/>
   <arg name="use_yaml_spawn" default="true"/>
-  <arg name="map_name" default="freicar_race_1"/>
+  <arg name="map_name" default="freicar_1.aismap"/>
   <node pkg="freicar_sign_detect" type="freicar_sign_detect_node" name="sign_detector" output="screen">
     <param name="agent_name" value="$(arg agent_name)"/>
   <param name="agent_name"  type="string" value="$(arg agent_name)" />
