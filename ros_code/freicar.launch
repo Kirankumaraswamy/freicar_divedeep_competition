@@ -5,8 +5,8 @@
 <arg name="init_y" default="0.0"/>
 <arg name="heading" default="0"/>
 <arg name="map_name" default="freicar_1.aismap"/>
-<arg name="desired_velocity" default="0.11"/>
-<arg name="lookahead_dist" default="0.8"/>
+<arg name="desired_velocity" default="0.15"/>
+<arg name="lookahead_dist" default="0.9"/>
 <arg name="throttle_limit" default="0.06"/>
 
 <param name="agent_name" value="$(arg agent_name)"/>
@@ -25,7 +25,7 @@ args="1 freicar_agent sim_agent.launch name:=$(arg agent_name) tf_name:=$(arg ag
 name="freicar_agent" output="screen" />
 
 <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
-    args="10 freicar_localization freicar_localization.launch agent_name:=$(arg agent_name) tf_name:=$(arg agent_name) init_x:=$(arg init_x) init_y:=$(arg init_y) heading:=$(arg heading) use_yaml_spawn:=$(arg use_yaml_spawn) map_name:=$(arg map_name)"
+    args="5 freicar_localization freicar_localization.launch agent_name:=$(arg agent_name) tf_name:=$(arg agent_name) init_x:=$(arg init_x) init_y:=$(arg init_y) heading:=$(arg heading) use_yaml_spawn:=$(arg use_yaml_spawn) map_name:=$(arg map_name)"
     name="freicar_localization" output="screen" />
 
  <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
@@ -33,6 +33,6 @@ name="freicar_agent" output="screen" />
     name="freicar_control" output="screen" />
 
 <node pkg="timed_roslaunch" type="timed_roslaunch.sh"
-args="10 planner planner.launch agent_name:=$(arg agent_name) map_name:=$(arg map_name)"     name="planner" output="screen" />
+args="15 planner planner.launch agent_name:=$(arg agent_name) map_name:=$(arg map_name)"   name="planner" output="screen" />
 
 </launch>

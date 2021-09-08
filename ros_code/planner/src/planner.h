@@ -87,19 +87,13 @@ public:
     std::string agent_name, map_name, map_path;
     float init_x, init_y, heading;
     bool use_yaml_spawn;
-
     tf2_ros::Buffer tf_buffer_;
 
-
-
-private:
     freicar::enums::PlannerCommand command = freicar::enums::PlannerCommand::STRAIGHT;
     bool goal_reached;
     bool command_changed = false;
     tf2_ros::TransformListener tf_obs_agent_listener;
-
-
-    int findPathDescription(freicar::mapobjects::Lane::Connection description);
+    int getDirectionValues(freicar::mapobjects::Lane::Connection value);
 };
 
 

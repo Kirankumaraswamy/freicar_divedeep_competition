@@ -161,9 +161,10 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
                 y_ld = k_end * x_ld + l_end;
 
                 //set the steering angle corresponding to look ahead point w.r.t to rear axis frame
-                steering_angle =  std::min( atan2(2 * y_ld * L_, ld_dist_ * ld_dist_)  + m * 0.2, delta_max_ );
+                steering_angle =  std::min( atan2(2 * y_ld * L_, ld_dist_ * ld_dist_)  + m * 0.3, delta_max_ );
+
                 //hard coded velocity value
-                vel = des_v_ ;
+                vel = des_v_ - (1 / (1+exp(-m))) * 0.05;
                 break;
             }
             //if we can't find the best two neigboring path points, it means we have almost approched goal.
@@ -347,7 +348,7 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
 
                     //set the steering angle corresponding to look ahead point w.r.t to rear axis frame
                     //adding some noise based on curvature to steering angle.
-                    steering_angle =  std::min( atan2(2 * y_ld * L_, ld_dist_ * ld_dist_)  + m * 0.15, delta_max_ );
+                    steering_angle =  std::min( atan2(2 * y_ld * L_, ld_dist_ * ld_dist_)  + m * 0.3, delta_max_ );
                     //hard coded velocity value
                     vel = des_v_ ;
                     break;
@@ -431,7 +432,7 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
 
 
     cmd_control_.steering = steering_angle;
-    cmd_control_.throttle =  vel - vel*abs(steering_angle);
+    cmd_control_.throttle =  vel;
     cmd_control_.throttle_mode = 0;
     cmd_control_.brake = brake;
     //cmd_control_.throttle = std::min(cmd_control_.throttle, throttle_limit_);

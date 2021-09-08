@@ -1,5 +1,5 @@
 {
-    "agent_name": "dive_deep",
+    "agent_name": "divedeep",
     "url": "https://github.com/Kirankumaraswamy/freicar_divedeep_competition.git",
     "capabilities": ["simulated", "real"],
     "parameters": [
@@ -14,9 +14,19 @@
             "default": true
         },
         {
-            "parameter": "other_param",
+            "parameter": "lookahead_dist",
             "type": "float",
-            "default": 0.5
+            "default": 0.9
+        },
+        {
+            "parameter": "desired_velocity",
+            "type": "float",
+            "default": 0.15
+        },
+        {
+            "parameter": "map_name",
+            "type": "string",
+            "default": "freicar_1.aismap"
         }
     ]
 }

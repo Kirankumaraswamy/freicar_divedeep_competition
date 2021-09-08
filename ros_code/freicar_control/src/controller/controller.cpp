@@ -125,7 +125,7 @@ void controller::receivePath(raiscar_msgs::ControllerPath new_path)
     else
     {
         path_ = std::vector<tf2::Transform>();
-        goal_reached_ = true;
+        goal_reached_ = false;
         completion_advertised_ = true;
         ROS_WARN_STREAM("Received empty path!");
     }
@@ -152,7 +152,7 @@ void controller::controller_step(nav_msgs::Odometry odom)
 }
 
 controller::controller():pos_tol_(0.1), idx_(0),
-                         goal_reached_(true), nh_private_("~"), tf_listener_(tf_buffer_), vel_pid(0.05, 0.15, 0.000){
+                         goal_reached_(false), nh_private_("~"), tf_listener_(tf_buffer_), vel_pid(0.05, 0.15, 0.000){
     // Get parameters from the parameter server
     nh_private_.param<double>("wheelbase", L_, 0.36);
 
