@@ -5,7 +5,7 @@
 <arg name="init_y" default="0.0"/>
 <arg name="heading" default="0"/>
 <arg name="map_name" default="freicar_1.aismap"/>
-<arg name="desired_velocity" default="0.15"/>
+<arg name="desired_velocity" default="0.12"/>
 <arg name="lookahead_dist" default="0.9"/>
 <arg name="throttle_limit" default="0.06"/>
 
