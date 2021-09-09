@@ -18,9 +18,9 @@ planner::planner(std::shared_ptr<ros::NodeHandle> n): n_(n), tf_obs_agent_listen
     n_->param<std::string>("map_name", map_name, "freicar_1.aismap");
 
 
-    //sub = n_->subscribe(agent_name+"/best_particle", 10, &planner::InitializeBestParticle, this);
+    sub = n_->subscribe(agent_name+"/best_particle", 10, &planner::InitializeBestParticle, this);
     //sub = n_->subscribe(agent_name+"/odometry", 10, &planner::InitializeBestParticle1, this);
-    sub = n_->subscribe("car_localization", 10, &planner::InitializeBestParticle2, this);
+    //sub = n_->subscribe("car_localization", 10, &planner::InitializeBestParticle2, this);
     goal_reached_a = n_->subscribe(agent_name+"/goal_reached", 10, &planner::GoalReachedStatusReceived, this);
 
     freicar_commands = n_->subscribe("/freicar_commands",10 , &planner::ExecuteCommand, this);
