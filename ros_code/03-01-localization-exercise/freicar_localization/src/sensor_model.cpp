@@ -175,44 +175,143 @@ bool sensor_model::calculatePoseProbability(const std::vector<cv::Mat> lane_regr
     // Check if there is a bev lane regression matrix available. If so, use it in the observation step
     max_prob = 0.0; // Dummy for compilation
     bool success = false; // Dummy for compilation
+    bool lane = false;
 
-    // Hint: The following code line can be used for transforming the sign positions using the particles pose.
-    float total_weight = 0;
-    //float LANE_POINTS_THRESHOLD = 3;
-    if(observed_signs.size()>0){
-        for(int i=0;i<particles.size();i++){
+    float min_dis = 0.0;
+    float min_particle = 9999;
+    float min_prob = 0;
+
+    std::vector<Eigen::Vector3f> lane_reg_points;
+
+    if (observed_signs.size() > 0) {
+        std::cout<<"signed probability.......";
+    }
+    if (lane_regression.size() > 0) {
+        lane_reg_points = get_lane_reg_points(lane_regression);
+        std::cout << "lane probability......."<< lane_reg_points.size()<<" ";
+        if(lane_reg_points.size() <= 0){
+            std::cout<< "zerooooooooo" <<std::endl;
+            return false;
+        }
+    }
+
+    std::vector<float> lane_reg_prob;
+    std::vector<float> sign_prob;
+    float total_lane_weight = 0;
+    if (lane_reg_points.size() > 0) {
+
+        for(int i=0;i<particles.size();i++) {
+            float lane_probability = 0;
+            float norm_lane_prob;
+
+            std::vector<Eigen::Vector3f> observed_world_reg = transformPoints(lane_reg_points, particles[i].transform);
+            std::vector<Eigen::Vector3f> gt_reg = getNearestPoints(observed_world_reg);
+
+            float distance = 0;
+            for (int j = 0; j < observed_world_reg.size(); j++) {
+                distance = std::sqrt((observed_world_reg[j] - gt_reg[j]).squaredNorm());
+                //std::cout<<"distance i: "<<i<<" " <<distance <<std::endl;
+                lane_probability += probability_density_function(0, 0.1, distance);
+
+
+            }
+            lane_probability = lane_probability/observed_world_reg.size();
+            //std::cout<<"distance i: "<<i<<" " <<distance <<std::endl;
+            lane_reg_prob.push_back(lane_probability);
+            total_lane_weight += lane_probability;
+        }
+    }
+
+    float total_sign_weight = 0;
+    if (observed_signs.size() > 0) {
+
+        for(int i=0;i<particles.size();i++) {
+            float sign_probability = 0;
+            float norm_sign_prob;
             //Transform the observed signs from freicar_x/base_link to map frame using the transform from the any particle present in map frame.
             const std::vector<Sign> observed_world_signs = transformSigns(observed_signs, particles[i].transform);
-            float probability = 0;
-            float norm_val = 0;
-            for(int j=0; j < observed_world_signs.size(); j++){
+            for (int j = 0; j < observed_world_signs.size(); j++) {
                 int gt_size = sign_data_[observed_world_signs.at(j).type].pts.size();
-                for(int k=0; k< gt_size; k++){
+                for (int k = 0; k < gt_size; k++) {
 
                     Point_KD<float> gt = sign_data_[observed_world_signs.at(j).type].pts.at(k);
                     const Eigen::Vector3f &observed_pts = observed_world_signs.at(j).position;
                     const Eigen::Vector3f &gt_pts = Eigen::Vector3f(gt.x, gt.y, 0.);
 
                     float distance = std::sqrt((observed_pts - gt_pts).squaredNorm());
-                    probability += exp(-distance) *  probability_density_function(0, 0.3, distance);
-                    norm_val += exp(-distance);
+                    sign_probability += probability_density_function(0, 0.3, distance);
+
                 }
             }
-
-            if(norm_val > 0) {
-                probability /= norm_val;
-            }
-            particles[i].weight = probability;
-            total_weight += particles[i].weight;
-
-            if(particles[i].weight>max_prob){
-                max_prob = particles[i].weight;
-            }
+            sign_prob.push_back(sign_probability);
+            total_sign_weight += sign_probability;
         }
     }
 
+
+
+
+    float max_sign = 0, max_lane = 0;
+    for(int i=0;i<particles.size();i++) {
+        float weight = 0;
+        if(lane_reg_prob.size() > 0 && sign_prob.size() > 0) {
+            weight = sign_prob.at(i) * 0.3 + lane_reg_prob.at(i) * 0.7;
+        }else if(sign_prob.size() > 0) {
+            weight = sign_prob.at(i);
+        }else{
+            weight = lane_reg_prob.at(i);
+        }
+
+        particles[i].weight = (particles[i].weight + weight)/2;
+        //particles[i].weight =  weight;
+        if (particles[i].weight > max_prob) {
+            max_prob = particles[i].weight;
+
+        }
+    }
+    //std::cout<<"->Max_probability: "<< max_prob<< " "<<max_sign<< " "<<max_lane<<std::endl;
+
     success = true;
     return success;
+}
+
+std::vector<Eigen::Vector3f> sensor_model::get_lane_reg_points(const std::vector<cv::Mat> lane_regression){
+    cv::Mat coordinates;
+    int total_points = 0;
+    std::vector<int> samples;
+    cv::Mat lane_img = lane_regression[0];
+    //setting threshold to extract pixels with value greater than REG_THRESH
+    //std::cout<<"before threshold:"<<lane_img<<std::endl;
+    cv::threshold(lane_img, lane_img, REG_THRESH, 255, cv::THRESH_BINARY);
+    //std::cout<<"after threshold:"<<lane_img<<std::endl;
+    cv::findNonZero(lane_img, coordinates);
+    total_points = coordinates.total();
+    std::vector<Eigen::Vector3f> lane_reg;
+
+
+    if (total_points > NUM_SAMPLES) {
+        // select randomly NUM_samples points from total_points
+        samples = pick(total_points, NUM_SAMPLES);
+    }
+    else{
+        return lane_reg;
+        // Use all the points in the total_points
+        //samples = pick(total_points - 1, total_points);
+    }
+    PointCloud<float> p;
+
+    for (size_t i = 0; i < samples.size(); i++) {
+        cv::Point point = coordinates.at<cv::Point>(samples.at(i));
+        float x_m = point.y / 200.0 - 0.25f;
+        float y_m = point.x / 200.0f - lane_img.cols/400.0f;
+        Eigen::Vector3f p_base_link(x_m, y_m, 0.0);
+        lane_reg.push_back(Eigen::Vector3f(x_m, y_m, 0));
+        Point_KD<float> p1 = {x_m, y_m};
+        p.pts.push_back(p1);
+    }
+
+    visualizer_->SendPoints(p, "lane_reg_base", "greatteam/base_link", 0, 1, 0);
+    return lane_reg;
 }
 
 

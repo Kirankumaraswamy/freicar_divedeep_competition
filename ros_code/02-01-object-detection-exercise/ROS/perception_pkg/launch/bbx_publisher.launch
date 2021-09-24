@@ -1,0 +1,7 @@
+<launch>
+<arg name="agent_name" default="greatteam"/>
+<arg name="weights" default="/home/freicar/freicar_ws/src/ros_code/02-01-object-detection-exercise/efficientdet-d0_20_30555.pth"/>
+<arg name="folder_path" default="/home/freicar/freicar_ws/src/ros_code/02-01-object-detection-exercise"/>
+<node pkg="perception_pkg" type="perception_node.sh" name="perception_node" output="screen"
+    args="$(arg agent_name) $(arg weights) $(arg folder_path)" />
+</launch>

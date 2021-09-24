@@ -26,8 +26,11 @@
 #include <nav_msgs/Odometry.h>
 #include "raiscar_msgs/ControlCommand.h"
 #include "std_msgs/Bool.h"
+#include "std_msgs/Float32.h"
 #include "raiscar_msgs/ControllerPath.h"
 #include "geometry_msgs/PoseArray.h"
+#include "freicar_common/FreiCarControl.h"
+#include "geometry_msgs/Point.h"
 
 class PID{
 public:
@@ -56,12 +59,15 @@ private:
 class controller {
 public:
     controller();
-    virtual void controller_step1(geometry_msgs::PoseArray msg);
     virtual void controller_step(nav_msgs::Odometry odom);
     void receivePath(raiscar_msgs::ControllerPath new_path);
     void sendGoalMsg(const bool reached);
     std::vector<tf2::Transform> transformPath(nav_msgs::Path &path, const std::string target_frame);
     std::vector<tf2::Transform> discretizePath(std::vector<tf2::Transform> &path, float dist);
+    void stop_status_initialize(std_msgs::Float32 distance);
+    void obstacle_status_initialize(std_msgs::Float32 distance);
+    void sendOvertakeStatus(const bool permission);
+
     // Vehicle parameters
     double L_;
     // Algorithm variables
@@ -75,24 +81,30 @@ public:
     bool goal_reached_;
     bool completion_advertised_;
     raiscar_msgs::ControlCommand cmd_control_;
+    freicar_common::FreiCarControl stop_signal_command_;
 
 
     // Ros infrastructure
     ros::NodeHandle nh_, nh_private_;
-    ros::Subscriber sub_odom_, sub_path_;
-    ros::Publisher pub_acker_, pub_goal_reached_;
+    ros::Subscriber sub_odom_, sub_path_, sub_stop_signal_, obstacle_signal_;
+    ros::Publisher pub_acker_, pub_goal_reached_, pub_stop_signal_, pub_overtake_permission;
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
     tf2_ros::TransformBroadcaster tf_broadcaster_;
 
     geometry_msgs::TransformStamped target_p_;
     std::string map_frame_id_, front_axis_frame_id_, rear_axis_frame_id_, target_frame_id_, tracker_frame_id, agent_name;
-    float current_steering_angle_;
+    float current_steering_angle_, steering_penalty, velocity_penalty;
 
     PID vel_pid;
     float vmax_;
-    float des_v_;
+    float des_v_, stop_distance, obstacle_distance, prev_obstacle_distance;
     float throttle_limit_, curvature_vel_limit_factor, steering_vel_limit_factor, dist_vel_limit_factor, minimum_throttle_limit;
+
+    bool overtake_status;
+    int standing_count;
+
+
 };
 
 

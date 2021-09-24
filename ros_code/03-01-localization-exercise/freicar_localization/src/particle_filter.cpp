@@ -260,23 +260,32 @@ bool particleOrdering (Particle i,Particle j) { return (i.weight.load()<j.weight
  * Returns a particle with the rotation of the best particle and the mean position of the k_mean best particles.
  * TODO: Can be improved by computing mean rotation as well
  */
-Particle particle_filter::getMeanParticle(int k_mean){
-    //std::cout<<particles_.size()<<std::endl;
+Particle particle_filter::getMeanParticle(int k_mean) {
     assert(k_mean <= particles_.size());
     std::vector<Particle> reverse_particles = particles_;
     std::sort(reverse_particles.begin(), reverse_particles.end(), particleOrdering);
     std::reverse(reverse_particles.begin(), reverse_particles.end());
-    Eigen::Transform<float,3,Eigen::Affine> out_t = Eigen::Transform<float,3,Eigen::Affine>::Identity();
-
+    Eigen::Transform<float, 3, Eigen::Affine> out_t = Eigen::Transform<float, 3, Eigen::Affine>::Identity();
+    Eigen::Matrix3f rot_total, rot_avg;
+    rot_total << 0., 0., 0.,
+            0., 0., 0.,
+            0., 0., 0.;
     Eigen::Vector3f translation(0.0f, 0.0f, 0.0f);
+
     float avg_weight = 0.0;
-    for(int i = 0; i < k_mean; i++){
-        if(i >= reverse_particles.size())
+    for (int i = 0; i < k_mean; i++) {
+        if (i >= reverse_particles.size())
             break;
 
-        const float c_w = reverse_particles.at(i).weight;
         translation += reverse_particles.at(i).transform.translation();
+        rot_total += reverse_particles.at(i).transform.rotation();
         avg_weight += reverse_particles.at(i).weight;
+    }
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            rot_avg(i, j) = rot_total(i, j) / k_mean;
+        }
     }
 
     translation[0] = translation[0] / k_mean;
@@ -286,8 +295,8 @@ Particle particle_filter::getMeanParticle(int k_mean){
     avg_weight = avg_weight / k_mean;
 
     out_t.translate(translation);
-    out_t.rotate(reverse_particles.at(0).transform.rotation());
-
+//  out_t.rotate(reverse_particles.at(0).transform.rotation());
+    out_t.rotate(rot_avg);
     Particle out;
     out.weight = avg_weight;
     out.transform = out_t;

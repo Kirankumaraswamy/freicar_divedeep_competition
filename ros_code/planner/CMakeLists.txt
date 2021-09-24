@@ -21,6 +21,7 @@ find_package(catkin REQUIRED COMPONENTS
     freicar_map
     raiscar_msgs
     freicar_common
+    cv_bridge
 )
 # dependecies of the current package
 catkin_package(CATKIN_DEPENDS 
@@ -31,6 +32,7 @@ catkin_package(CATKIN_DEPENDS
     freicar_map
     raiscar_msgs
     freicar_common
+    cv_bridge
 )
 # header files to consider
 include_directories(

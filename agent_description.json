@@ -4,6 +4,21 @@
     "capabilities": ["simulated", "real"],
     "parameters": [
         {
+            "parameter": "use_yaml_spawn",
+            "type": "bool",
+            "default": false
+        },
+        {
+            "parameter": "init_x",
+            "type": "float",
+            "default": 0
+        },
+        {
+            "parameter": "init_y",
+            "type": "float",
+            "default": 0
+        },
+        {
             "parameter": "sync_topic",
             "type": "string",
             "default": "!"
@@ -16,17 +31,47 @@
         {
             "parameter": "lookahead_dist",
             "type": "float",
-            "default": 0.9
+            "default": 1.1
         },
         {
             "parameter": "desired_velocity",
             "type": "float",
-            "default": 0.12
+            "default": 0.10
         },
         {
             "parameter": "map_name",
             "type": "string",
             "default": "freicar_1.aismap"
-        }
+        },
+        {
+            "parameter": "throttle_limit",
+            "type": "float",
+            "default": 0.06
+        },
+        {
+            "parameter": "steering_penalty",
+            "type": "float",
+            "default": 0.0
+        },
+        {
+            "parameter": "velocity_penalty",
+            "type": "float",
+            "default": 0.05
+        },
+        {
+            "parameter": "use_lane_regression",
+            "type": "bool",
+            "default": true
+        },
+        {
+            "parameter": "evaluate",
+            "type": "bool",
+            "default": true
+        },
+        {
+            "parameter": "obstacle_radius",
+            "type": "float",
+            "default": 0.3
+        },
     ]
 }

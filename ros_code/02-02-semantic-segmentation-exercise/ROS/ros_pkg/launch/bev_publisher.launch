@@ -1,0 +1,7 @@
+<launch>
+<arg name="agent_name" default="freicar_123"/>
+<arg name="weights" default="recent_model_19.pth.tar"/>
+<arg name="folder_path" default="/home/freicar/freicar_ws/src/Freicar_DiveDeep/02-02-semantic-segmentation-exercise"/>
+  <node pkg="ros_pkg" type="lane_detector.sh" name="bev_node" output="screen"
+    args="$(arg agent_name) $(arg weights) $(arg folder_path)" />
+</launch>

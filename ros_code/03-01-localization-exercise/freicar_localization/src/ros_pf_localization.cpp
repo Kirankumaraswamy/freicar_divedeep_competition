@@ -25,7 +25,7 @@ freicar::map::Map &Localizer::map_ = freicar::map::Map::GetInstance();
  */
 Localizer::Localizer(std::shared_ptr<ros::NodeHandle> n) : n_(n), it_(*n) {
 
-    n_->param<std::string>("agent_name", agent_name, "freicar_1");
+    n_->param<std::string>("agent_name", agent_name, "greatteam");
     n_->param<bool>("use_yaml_spawn", use_yaml_spawn, false);
     n_->param<float>("init_x", init_x, 1.0);
     n_->param<float>("init_y", init_y, 0);
@@ -37,7 +37,6 @@ Localizer::Localizer(std::shared_ptr<ros::NodeHandle> n) : n_(n), it_(*n) {
     ros::Duration sleep_time(1);
     odo_sub_ = n_->subscribe(agent_name+"/odometry", 1, &Localizer::OdoCallback, this);
     marker_sub_ = n_->subscribe(agent_name+"/traffic_signs", 1, &Localizer::markerCallback, this);
-    last_odo_update_ = ros::Time::now();
 
     freicar::map::ThriftMapProxy map_proxy("127.0.0.1", 9091, 9090);
     //std::string map_path = "/home/freicar/freicar_ws/src/freicar_base/freicar_map/maps/freicar_1.aismap";
@@ -59,6 +58,7 @@ Localizer::Localizer(std::shared_ptr<ros::NodeHandle> n) : n_(n), it_(*n) {
     if (use_lane_reg_) {
         image_sub_ = it_.subscribe(agent_name+"/sim/camera/rgb/front/reg_bev", 1, &Localizer::RegCallback, this);
     }
+    last_odo_update_ = ros::Time::now();
 // if the map can't be loaded
     if (!map_proxy.LoadMapFromFile(map_path)) {
         ROS_INFO("could not find thriftmap file: %s, starting map server...", map_path.c_str());
@@ -134,6 +134,7 @@ void Localizer::markerCallback(const freicar_common::FreiCarSignsConstPtr &marke
             sign_observations.push_back(new_sign);
         }
     }
+    //std::cout<<"Sign recieved ....."<<std::endl;
     latest_signs_ = std::pair<std::vector<Sign>,ros::Time>(sign_observations, markers_msg->header.stamp);
 }
 
@@ -148,7 +149,7 @@ void Localizer::OdoCallback(const nav_msgs::OdometryConstPtr &msg) {
     p_filter->MotionStep(*msg);
 
     visualizer_->SendBestParticle(p_filter->getBestParticle(), "/map");
-    Particle best_particle = p_filter->getMeanParticle(500);
+    Particle best_particle = p_filter->getMeanParticle(2000);
     visualizer_->SendBestParticle(best_particle, "map");
     last_odo_update_ = msg->header.stamp;
 

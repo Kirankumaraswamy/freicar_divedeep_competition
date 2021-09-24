@@ -17,6 +17,8 @@
   <arg name="distance_vel_limit_factor" default="0.3"/>
   <arg name="minimum_throttle_limit" default="0.001"/>
  <arg name="lookahead_dist" default="0.7"/>
+ <arg name="steering_penalty" default="0.3"/>
+ <arg name="velocity_penalty" default="0.05"/>
 
   <remap from="path_segment" to="$(arg name)/path_segment"/>
   <remap from="goal_reached" to="$(arg name)/goal_reached"/>
@@ -39,5 +41,7 @@
     <param name="distance_vel_limit_factor" value="$(arg distance_vel_limit_factor)"/>
     <param name="minimum_throttle_limit" value="$(arg minimum_throttle_limit)"/>
     <param name="lookahead_dist" value="$(arg lookahead_dist)"/>
+    <param name="steering_penalty" value="$(arg steering_penalty)"/>
+    <param name="velocity_penalty" value="$(arg velocity_penalty)"/>
   </node>
 </launch>

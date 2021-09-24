@@ -18,8 +18,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
 
-#define NUM_SAMPLES 50
-#define REG_THRESH 150
+#define NUM_SAMPLES 100
+#define REG_THRESH 200
 
 class sensor_model
 {
@@ -40,6 +40,7 @@ public:
     float SignMeasurementPoseProbability(const std::vector<Sign>& observed_signs, Eigen::Transform<float,3,Eigen::Affine> particle_transform);
     std::vector<Sign> transformSigns(const std::vector<Sign>& signs, const Eigen::Transform<float,3,Eigen::Affine>& particle_pose);
     float LaneMeasurementPoseProbability(const std::vector<Eigen::Vector3f>& observed_points, const std::vector<Eigen::Vector3f>& data_associations, const std::vector<float>& weights, const float total_weight);
+    std::vector<Eigen::Vector3f> get_lane_reg_points(const std::vector<cv::Mat> lane_regression);
 
 private:
     float sumWeights(const std::vector<float>& weights);
