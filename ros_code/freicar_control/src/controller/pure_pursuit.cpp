@@ -180,7 +180,7 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
                         }
                     }else{
                         //vel = des_v_;
-                        vel = des_v_ - (des_v_ * exp(- abs((obstacle_distance - 1.5))));
+                        vel = des_v_ - (des_v_ * exp(- abs((obstacle_distance - 1.75))));
                     }
                 }else if(stop_distance > 0.3 && stop_distance <= 1.2) {
                     //stop for 3 seconds near stop signal
