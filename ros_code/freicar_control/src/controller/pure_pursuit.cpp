@@ -185,7 +185,7 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
                 }else if(stop_distance > 0.3 && stop_distance <= 1.2) {
                     //stop for 3 seconds near stop signal
                     //vel = des_v_;
-                    if (stop_distance <= 0.8) {
+                    if (stop_distance <= 0.6) {
                         cmd_control_.steering = 0;
                         cmd_control_.throttle = 0.0;
                         cmd_control_.throttle_mode = 0;
@@ -195,7 +195,7 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
                         stop_distance = 100.0;
                     }else{
                         //vel = des_v_/2;
-                        vel = des_v_ - (des_v_ * exp(-abs((stop_distance - 0.8))));
+                        vel = des_v_ - (des_v_ * exp(-abs((stop_distance - 0.6))));
                     }
                 }
 
