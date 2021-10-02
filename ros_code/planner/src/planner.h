@@ -66,7 +66,6 @@ public:
 
     void ExecuteCommand(const freicar_common::FreiCarControl::ConstPtr &ctrl_cmd);
     void PublishNewPlan();
-    void PublishOvertakePlan();
     void GoalReachedStatusReceived(const std_msgs::Bool reached);
     void InitializeBestParticle1(const nav_msgs::Odometry msg);
     void InitializeBestParticle2(const freicar_common::FreiCarAgentLocalization msg);
@@ -75,39 +74,43 @@ public:
     void BoundingBoxRecieved(const std_msgs::Float32MultiArray msg);
     float check_collision(Eigen::Vector3f obj_point, float px, float py);
     void SetOvertakeStatus(const std_msgs::Bool status);
+    void PublishOvertakePlan();
+    void OvertakePlan();
 
-    std::vector<freicar::mapobjects::Point3D>OvertakePlan();
+    bool overtake_status;
+
+
     ros::Subscriber freicar_commands;
 
     freicar::mapobjects::Point3D current_position ;
-    float current_angle;
 
     ros::Subscriber sub;
     ros::Subscriber goal_reached_a,depth_info, rgb, depth;
     ros::Subscriber external_control_sub;
     ros::Subscriber boundingbox_sub;
+    ros::Subscriber request_overtake;
+
     ros::Subscriber overtake_pub;
-
-
     ros::Publisher path_segment;
-    ros::Publisher otpath_segment;
     ros::Publisher broadcast,overtake_plan;
     ros::Publisher stopline_status;
     ros::Publisher right_of_way_status;
-    ros::Publisher obstacle_status;
+    ros::Publisher Overtake_status;
     ros::Publisher stop_status;
-    ros::Publisher pub_overtake_permission;
+    ros::Publisher obstacle_status;
     std_msgs::Float32 obstacleDistance;
 
     ros::Publisher marker_pub;
 
     float obstacle_radius;
+    float current_angle;
 
     ros::Time last_stop_publish_time;
     std_msgs::Float32 stopDistance;
+
     std_msgs::Float32MultiArray current_boundig_bxs;
+
     cv::Mat depth_image;
-    bool overtake_status;
 
     std::string agent_name, map_name, map_path;
     float init_x, init_y, heading;
@@ -117,10 +120,10 @@ public:
 
     std::string closest_lane_uuid;
 
-    std::vector<Eigen::Vector3f> published_path;
+    std::vector<Eigen::Vector3f> published_path, current_overtake_path;
 
     freicar::enums::PlannerCommand command = freicar::enums::PlannerCommand::STRAIGHT;
-    bool goal_reached, publish_empty_plan, activate_overtake_plan;
+    bool goal_reached, publish_empty_plan, activate_overtake_plan, send_obstacle;
     bool command_changed = false;
     tf2_ros::TransformListener tf_obs_agent_listener;
     int getDirectionValues(freicar::mapobjects::Lane::Connection value);

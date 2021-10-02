@@ -167,22 +167,23 @@ void PurePursuit::controller_step(nav_msgs::Odometry odom) {
 
 
                 if(obstacle_distance <= 2.5){
-                    if(obstacle_distance < 1.75){
+                    if(obstacle_distance < 2){
                         vel = 0;
                         cmd_control_.steering = steering_angle;
                         cmd_control_.throttle = 0.0;
                         cmd_control_.throttle_mode = 0;
                         cmd_control_.brake = true;
                         pub_acker_.publish(cmd_control_);
-                        sleep(0.5);
+                        //sleep(0.5);
                         if(standing_count > 5){
                             sendOvertakeStatus(true);
+                            standing_count = 0;
                         }
                     }else{
                         //vel = des_v_;
                         vel = des_v_ - (des_v_ * exp(- abs((obstacle_distance - 1.75))));
                     }
-                }else if(stop_distance > 0.3 && stop_distance <= 1.2) {
+                }else if(stop_distance > 0.3 && stop_distance <= 1.5) {
                     //stop for 3 seconds near stop signal
                     //vel = des_v_;
                     if (stop_distance <= 0.6) {

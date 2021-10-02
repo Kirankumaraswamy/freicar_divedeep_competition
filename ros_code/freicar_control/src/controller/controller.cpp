@@ -134,13 +134,12 @@ void controller::receivePath(raiscar_msgs::ControllerPath new_path)
 }
 
 void controller::sendOvertakeStatus(const bool permission){
-    if (!completion_advertised_) {
-        std::cout << "Overtake Status Published" << std::endl;
+        std::cout << "Overtake Status Published.................." << std::endl;
         completion_advertised_ = true;
         std_msgs::Bool msg;
         msg.data = permission;
         pub_overtake_permission.publish(msg);
-    }
+        standing_count = 0;
 }
 
 
@@ -153,13 +152,9 @@ void controller::obstacle_status_initialize(std_msgs::Float32 distance)
 {
     obstacle_distance = distance.data;
 
-    if(standing_count == 0 && obstacle_distance <= 2.0){
-        prev_obstacle_distance = obstacle_distance;
+    if(obstacle_distance < 2){
         standing_count++;
-    }
-    else if(abs(prev_obstacle_distance - obstacle_distance) < 0.2 && obstacle_distance <= 2){
-        standing_count++;
-    }else if(obstacle_distance > 2.0){
+    }else if(obstacle_distance >= 2){
         standing_count = 0;
     }
     std::cout << "POD" << prev_obstacle_distance <<"obstacle_distance"<< obstacle_distance << "standing_count" << standing_count << std::endl;
@@ -218,7 +213,6 @@ controller::controller():pos_tol_(0.1), idx_(0),
     completion_advertised_ = false;
     current_steering_angle_ = 0;
     obstacle_distance = 100.0;
-    standing_count = 0;
-    prev_obstacle_distance = 0.0;
+
     std::cout << "Pure Pursuit Controller started for frame : " << tracker_frame_id << std::endl;
 }

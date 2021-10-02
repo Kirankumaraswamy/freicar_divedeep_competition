@@ -159,6 +159,7 @@ void particle_filter::InitParticles(){
 
     std::uniform_real_distribution<float> generate_x(init_x, init_x);
     std::uniform_real_distribution<float> generate_y(init_y, init_y);
+    heading = -heading * (M_PI / 180);
     std::uniform_real_distribution<float> generate_rot(heading, heading);
 
     for(int i=0;i<sizeOfParticles-1;i++){
